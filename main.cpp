@@ -3,7 +3,11 @@
 #include "args-parser/all.hpp"
 #include "GNSSModule.h"
 #include "FlightPath.h"
-#include "LedGUI.h"
+#include "UI/LedGUI.h"
+#include "Naver.h"
+#include <csignal>
+#include "Communication/Bluetooth.h"
+#include "Communication/TCPSerialComm.h"
 
 #define COUNTDOWN_START_DISTANCE        300.0
 #define COUNTDOWN_STEP                  100.0
@@ -12,7 +16,22 @@
 
 void configCLI(Args::CmdLine &cmd, char* call);
 
+bool runApp = true;
+void int_handler(int s){
+    printf("Caught signal %d\n",s);
+    runApp = false;
+}
+
 int main(int argc, char** argv) {
+    // *** Catch interrupt signal ***
+    struct sigaction sigIntHandler{};
+
+    sigIntHandler.sa_handler = int_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, nullptr);
+    // ******************************
 
     Args::CmdLine cmd( argc, argv );
     configCLI(cmd, argv[0]);
@@ -34,6 +53,9 @@ int main(int argc, char** argv) {
     // Prepare led string
     LedGUI gui(39, OFFSET_MAX); // Leds number and max shift in meters
 
+    // Prepare bluetooth interface
+    TCPSerialComm sc;
+    sc.start();
 
     // Probe verbose arg
     bool verbose = cmd.isDefined("-v");
@@ -47,18 +69,17 @@ int main(int argc, char** argv) {
     auto gnss = GNSSModule(std::stoi(cmd.value("-b")), verbose, device);
 
     /*** MAIN LOOP ***/
-    std::thread thd(&LedGUI::exec, &gui);
+    std::thread uiThd(&LedGUI::exec, &gui);
+    std::thread scThd(&TCPSerialComm::exec, &sc);
 
     const int APP_STATE_INIT_PATH = 1;
     const int APP_STATE_NAVIGATION = 3;
 
     int appState = APP_STATE_INIT_PATH;
 
-    int blinkedFor= -1;
+    Naver naver(&gui, &gnss);
 
-    unsigned long lastMsgAt= tim::now();
-
-    while(true){
+    while(runApp){
         switch (appState) { // NOLINT(hicpp-multiway-paths-covered)
             case APP_STATE_INIT_PATH:{
                 gui.setMode(LedGUI::MODE_INIT);
@@ -71,12 +92,13 @@ int main(int argc, char** argv) {
                 }
                 if(!kmlFilePath.empty()) {
                     try {
-                        std::cout << "[INFO] KML search result: " << kmlFilePath << std::endl;
+                        // std::cout << "[INFO] KML search result: " << kmlFilePath << std::endl;
                         fp = new FlightPath(kmlFilePath);
+                        naver.loadPath(fp);
                         appState = APP_STATE_NAVIGATION;
                         fp->print();
                     } catch (const std::runtime_error &e) {
-                        std::cout << "[ERR] " << e.what() << std::endl;
+                        // std::cout << e.what() << std::endl;
                         usleep(1000000);
                     }
                 } else {
@@ -86,47 +108,15 @@ int main(int argc, char** argv) {
                 break;
             }
             case APP_STATE_NAVIGATION:{
-                if(!gnss.isOpen()){
-                    gui.setMode(LedGUI::MODE_CAROUSEL);
-                    gnss.cleanup();
-                    gnss.startBuffer();
-                } else {
-                    gnss.update();
-                    if (gnss.hasFix()) {
-                        gui.setMode(LedGUI::MODE_NAV);
-                        GeoPoint me(gnss.getLat(), gnss.getLng());
-                        int my_path_idx = fp->findMyPath(me, gnss.getHeading());
-                        GeoRoute my_path = fp->getRoute(my_path_idx);
-                        double shift = my_path.distanceTo(me) * (double)my_path.getShiftDirection(me);
-                        gui.setRouteShift(shift);
-
-                        if(my_path.distanceToEnd(me) < COUNTDOWN_START_DISTANCE) {
-                            if(blinkedFor != my_path_idx) {
-                                if (my_path.distanceToEnd(me) < FINISH_BLINK_START_DISTANCE) {
-                                    gui.blinkFinish();
-                                    blinkedFor = my_path_idx;
-                                } else {
-                                    gui.setNavCountdown((char)((my_path.distanceToEnd(me)/COUNTDOWN_STEP)+1));
-                                }
-                            }
-                        }
-
-                        if(lastMsgAt+1000 < tim::now()) {
-                            std::cout << "My route: " << my_path_idx << ", offset: " << my_path.distanceTo(me) << "m, "
-                                      << my_path.distanceToEnd(me)
-                                      << "m left" << std::endl;
-                            lastMsgAt = tim::now();
-                        }
-                    } else {
-                        gui.setMode(LedGUI::MODE_CAROUSEL);
-                    }
-                }
+                naver.update();
                 break;
             }
         }
 
         usleep(100000); // 100ms
     }
+
+    gui.stop();
 }
 
 void configCLI(Args::CmdLine &cmd, char* call){

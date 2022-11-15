@@ -82,45 +82,8 @@ void LedGUI::exec() {
             }
         }
 
-        run_mutex.lock();
-        // Clear side panel
-        for(char i=0; i<LedGUI::SIDE_PANEL_SIZE; i++){
-            leds.clear(i);
-            leds.clear(-1-i);
-        }
-
-        switch (this->sidePanelMode) {
-            case LedGUI::SIDE_PANEL_MODE_BLINK_FINISH: {
-                for (char i = 0; i < navCountdown; i++) {
-                    leds.set(i, LED_COLOR_GREEN);
-                    leds.set(-1-i, LED_COLOR_GREEN);
-                }
-                break;
-            }
-            case LedGUI::SIDE_PANEL_MODE_COUNTDOWN: {
-                if(navBlinkFinishChangeAt+LedGUI::NAV_BLINK_FINISH_INTERVAL < tim::now()){
-                    if(navBlinkFinishCnt%2) {
-                        leds.set(0, LED_COLOR_GREEN);
-                        leds.set(-1, LED_COLOR_GREEN);
-                    }
-
-                    navBlinkFinishCnt--;
-                    if(!navBlinkFinishCnt)
-                        sidePanelMode = LedGUI::SIDE_PANEL_MODE_EMPTY;
-
-                    navBlinkFinishChangeAt = tim::now();
-                }
-                break;
-            }
-            default:
-                break;
-        }
-        run_mutex.unlock();
-
         leds.render();
 
-        //std::cout << "[INFO] LedGUI: Running" << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -167,6 +130,42 @@ void LedGUI::navSequence() {
         color |= LED_COLOR_GREEN;
     }
     leds.set(navLedIdx+SIDE_PANEL_SIZE, color);
+
+    run_mutex.lock();
+    // Clear side panel
+    for(char i=0; i<LedGUI::SIDE_PANEL_SIZE; i++){
+        leds.clear(i);
+        leds.clear(-1-i);
+    }
+
+    // Side panel events
+    switch (this->sidePanelMode) {
+        case LedGUI::SIDE_PANEL_MODE_BLINK_FINISH: {
+            for (char i = 0; i < navCountdown; i++) {
+                leds.set(i, LED_COLOR_GREEN);
+                leds.set(-1-i, LED_COLOR_GREEN);
+            }
+            break;
+        }
+        case LedGUI::SIDE_PANEL_MODE_COUNTDOWN: {
+            if(navBlinkFinishChangeAt+LedGUI::NAV_BLINK_FINISH_INTERVAL < tim::now()){
+                if(navBlinkFinishCnt%2) {
+                    leds.set(0, LED_COLOR_GREEN);
+                    leds.set(-1, LED_COLOR_GREEN);
+                }
+
+                navBlinkFinishCnt--;
+                if(!navBlinkFinishCnt)
+                    sidePanelMode = LedGUI::SIDE_PANEL_MODE_EMPTY;
+
+                navBlinkFinishChangeAt = tim::now();
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    run_mutex.unlock();
 }
 
 void LedGUI::initSequence() {

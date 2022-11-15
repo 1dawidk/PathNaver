@@ -12,7 +12,6 @@
 class WS281xStrip {
 public:
     explicit WS281xStrip(int n);
-
     virtual ~WS281xStrip();
 
     void render();
@@ -24,7 +23,7 @@ private:
     int n;      //Leds number
 #ifndef DEBUG
     ws2811_t wsctrlr{};
-#elif
+#else
     int dump;
 #endif
 };

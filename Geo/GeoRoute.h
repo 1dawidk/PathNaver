@@ -6,7 +6,7 @@
 #define PATHNAVER_GEOROUTE_H
 
 #include "GeoPoint.h"
-#include "Geo.h"
+#include "GeoCalc.h"
 
 class GeoRoute {
 public:

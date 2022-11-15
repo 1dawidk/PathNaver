@@ -4,7 +4,7 @@
 
 #include <NMEA/NMEA.h>
 #include "GNSSModule.h"
-#include "Geo.h"
+#include "Geo/GeoCalc.h"
 
 GNSSModule::GNSSModule(int baudrate, bool verbose, const std::string &port) {
     this->baudrate = baudrate;
@@ -68,7 +68,8 @@ void GNSSModule::update() {
                     this->lat = (double)latd + latm/60.0;
                     this->lng = (double)lngd + lngm/60.0;
                     //this->heading = std::stod(data[8]);
-                    this->heading = Geo::calcHeading(GeoPoint(llat, llng), GeoPoint(lat, lng));
+                    this->heading = GeoCalc::calcHeading(GeoPoint(llat, llng), GeoPoint(lat, lng));
+                    //std::cout << "[DEBUG] " << "GNSSModule: update - " << lat << "," << lng << std::endl;
                     this->fix = true;
                 } else {
                     this->fix = false;

@@ -72,7 +72,7 @@ private:
     unsigned long lastInitBlinkTime;
     int initBlinkState;
     static const unsigned long INIT_BLINK_INTERVAL = 100; // ms
-    static const int INIT_BLINK_COLOR = 0x00999999; // WWBBGGRR
+    static const int INIT_BLINK_COLOR = 0x00111111; // WWBBGGRR
     void initSequence();
 
     WS281xStrip leds;

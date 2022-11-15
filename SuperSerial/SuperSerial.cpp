@@ -198,8 +198,8 @@ std::vector<std::string> SuperSerial::listPorts() {
 
     r = SuperMisc::exec("ls -1 /dev/ttyS* 2> /dev/null");
     if(!r.empty()) {
-        std::vector<std::string> USBs = SuperMisc::split(r, '\n');
-        ports.insert(ports.end(), USBs.begin(), USBs.end());
+        std::vector<std::string> Ss = SuperMisc::split(r, '\n');
+        ports.insert(ports.end(), Ss.begin(), Ss.end());
     }
 
     return ports;

@@ -119,7 +119,7 @@ int FlightPath::findMyPath(const GeoPoint& p, double hdg) {
     double nearestDist= fabs(path[0]->distanceTo(p));
 
     for(const auto& r: path){
-        if (Geo::calcHeadingDiff(r->getHeading(), hdg) < 45){
+        if (GeoCalc::calcHeadingDiff(r->getHeading(), hdg) < 45){
             double dist = fabs(r->distanceTo(p));
             if (dist < nearestDist){
                 nearestIdx = idx;

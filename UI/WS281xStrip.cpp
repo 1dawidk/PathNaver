@@ -2,6 +2,7 @@
 // Created by dkulpa on 06.09.2022.
 //
 
+#include <iostream>
 #include "WS281xStrip.h"
 
 WS281xStrip::WS281xStrip(int n) {
@@ -36,12 +37,13 @@ uint32_t& WS281xStrip::operator[](int i) {
     if(i < -n)
         i = -n;
 
-    if(i >= 0)
+    if(i >= 0) {
         return wsctrlr.channel[0].leds[i];
-    else
-        return wsctrlr.channel[0].leds[n-i];
-#elif
-    return this->dump;
+    } else {
+        return wsctrlr.channel[0].leds[n + i];
+    }
+#else
+    return reinterpret_cast<uint32_t &>(this->dump);
 #endif
 }
 

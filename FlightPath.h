@@ -10,9 +10,9 @@
 #include "fstream"
 #include <memory>
 #include <vector>
-#include "GeoPoint.h"
+#include "Geo/GeoPoint.h"
 #include "SuperMisc.h"
-#include "GeoRoute.h"
+#include "Geo/GeoRoute.h"
 
 class FlightPath {
 public:
