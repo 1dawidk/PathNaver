@@ -10,12 +10,14 @@
 #include "cstring"
 
 #define BUFFEREDREADER_MAX_BUFFER_SIZE  1024
+#define BUFFEREDREADER_MAX_QUEUE_SIZE   10
 
 class BufferedReader {
 public:
     BufferedReader();
     int update(char *rx);
     std::string popMsg();
+    int queueSize();
 private:
     char rxBuff[2*BUFFEREDREADER_MAX_BUFFER_SIZE]{};
     char *rxBuffHead;

@@ -10,8 +10,10 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <mutex>
 #include "thread"
 #include "cstring"
+#include "BufferedReader.h"
 
 typedef struct sockaddr_in sockaddr_in_t;
 
@@ -21,6 +23,12 @@ public:
     bool start();
     void exec();
 
+    // Receive
+    std::string popMessage();
+    bool msgsInQueue();
+
+    // Send
+    void send(const std::string &msg);
 
 private:
     sockaddr_in_t loc;
@@ -28,9 +36,14 @@ private:
     int soc;
     int cli;
 
+    BufferedReader br;
+    std::vector<std::string> sendQueue;
+
     bool run;
     bool clientConnected;
 
+    std::mutex rxMutex;
+    std::mutex txMutex;
     std::thread *kaThd;
 };
 

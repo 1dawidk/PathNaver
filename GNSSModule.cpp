@@ -5,6 +5,7 @@
 #include <NMEA/NMEA.h>
 #include "GNSSModule.h"
 #include "Geo/GeoCalc.h"
+#include "Console.h"
 
 GNSSModule::GNSSModule(int baudrate, bool verbose, const std::string &port) {
     this->baudrate = baudrate;
@@ -32,7 +33,7 @@ bool GNSSModule::find() {
     this->port = SuperSerial::findDevice(this->baudrate,
                                          tags,
                                          "GNSS module",
-                                         true);
+                                         false);
 
     return !this->port.empty();
 }
@@ -69,22 +70,21 @@ void GNSSModule::update() {
                     this->lng = (double)lngd + lngm/60.0;
                     //this->heading = std::stod(data[8]);
                     this->heading = GeoCalc::calcHeading(GeoPoint(llat, llng), GeoPoint(lat, lng));
-                    //std::cout << "[DEBUG] " << "GNSSModule: update - " << lat << "," << lng << std::endl;
                     this->fix = true;
                 } else {
                     this->fix = false;
                 }
             } catch (std::invalid_argument &e) {
                 if (this->verbose)
-                    std::cout << e.what() << std::endl;
+                    Console::loge("GNSSModule", e.what());
             } catch (std::out_of_range &e) {
                 if (this->verbose)
-                    std::cout << e.what() << std::endl;
+                    Console::loge("GNSSModule", e.what());
             }
         } else {
             // Check if port is really open. If not -> perform cleanup
             if(!serial_buffer->isOpen()){
-                std::cout << "[WARN] GNSS module disconnected! Cleanup!" << std::endl;
+                Console::logw("GNSSModule", "Disconnected! Cleanup!");
                 cleanup();
             }
         }
@@ -114,7 +114,7 @@ bool GNSSModule::hasFix() const {
 void GNSSModule::cleanup() {
     this->fix= false;
     if(serial_buffer != nullptr) {
-        std::cout << "[INFO] Closing serial..." << std::endl;
+        Console::logi("GNSSModule", "Closing serial...");
         serial_buffer->close();
         delete serial_buffer;
     }

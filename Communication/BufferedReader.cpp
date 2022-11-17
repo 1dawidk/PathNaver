@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "BufferedReader.h"
+#include "../Console.h"
 
 BufferedReader::BufferedReader() {
     rxBuffHead= rxBuff;
@@ -30,7 +31,9 @@ int BufferedReader::update(char *rx) {
         msgBuff[endlPos-rxBuff] = 0;
 
         msgs.emplace_back(msgBuff);
-        std::cout << "BR: New message: " << msgs[msgs.size()-1] << std::endl;
+        if(msgs.size() > BUFFEREDREADER_MAX_QUEUE_SIZE){
+            msgs.erase(msgs.begin());
+        }
 
         msgCnt++;
         memmove(rxBuff, endlPos+1, rxBuffHead-endlPos);
@@ -42,5 +45,16 @@ int BufferedReader::update(char *rx) {
 }
 
 std::string BufferedReader::popMsg() {
-    return std::string();
+    std::string msg;
+
+    if(!msgs.empty()) {
+        msg = msgs[0];
+        msgs.erase(msgs.begin());
+    }
+
+    return msg;
+}
+
+int BufferedReader::queueSize() {
+    return msgs.size();
 }

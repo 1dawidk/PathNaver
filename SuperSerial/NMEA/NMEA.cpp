@@ -29,6 +29,17 @@ NMEA::NMEA(const std::string &s) {
     this->data = SuperMisc::split(msg.substr(fs+1), ',');
 }
 
+NMEA::NMEA(const std::string &name, std::vector<std::string> &data) {
+    this->name= name;
+    this->data= data;
+    std::string raw= name;
+    for(const std::string &d: data){
+        raw+= ","+d;
+    }
+
+    this->checksum= getChecksum(raw);
+}
+
 std::string NMEA::getChecksum(const std::string &msg) {
     std::string chars = std::string(msg);
     if(chars[0]=='$')
@@ -64,4 +75,14 @@ void NMEA::cleanupMessage(std::string &msg) {
 
 std::string NMEA::getValue(int i) {
     return this->data[i];
+}
+
+std::string NMEA::toString() {
+    std::string raw = "$" + this->name;
+    for(const std::string d: data){
+        raw += "," + d;
+    }
+    raw += "*" + this->checksum + "\n";
+
+    return raw;
 }

@@ -6,10 +6,12 @@
 #include <tim.h>
 #include <sys/poll.h>
 #include "TCPSerialComm.h"
-#include "BufferedReader.h"
+#include "../Console.h"
 
 TCPSerialComm::TCPSerialComm() {
     run= false;
+    rxMutex.unlock();
+    txMutex.unlock();
 }
 
 bool TCPSerialComm::start() {
@@ -17,13 +19,13 @@ bool TCPSerialComm::start() {
 
     // Creating socket file descriptor
     if ((soc = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        std::cout << "Cannot create socket!" << std::endl;
+        Console::loge("TSC", "Cannot create socket!");
         return false;
     }
 
     // Forcefully attaching socket to the port 8080
     if (setsockopt(soc, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        std::cout << "Cannot set opts!" << std::endl;
+        Console::loge("TSC", "Cannot set opts!");
         return false;
     }
     loc.sin_family = AF_INET;
@@ -32,11 +34,11 @@ bool TCPSerialComm::start() {
 
     // Forcefully attaching socket
     if (bind(soc, (struct sockaddr*)&loc, sizeof(loc)) < 0) {
-        std::cout << "Cannot bind!" << std::endl;
+        Console::loge("TSC", "Cannot bind!");
         return false;
     }
     if (listen(soc, 3) < 0) {
-        std::cout << "Cannot listen!" << std::endl;
+        Console::loge("TSC", "Cannot create listen!");
         return false;
     }
 
@@ -51,7 +53,6 @@ void TCPSerialComm::exec() {
     struct pollfd pfd{};
 
     char rxBuf[1024];
-    BufferedReader br;
 
     while(run){
         if(clientConnected){
@@ -60,11 +61,22 @@ void TCPSerialComm::exec() {
                 if(pfd.revents & POLLIN){
                     size_t bytes_read = read(cli, rxBuf, sizeof(rxBuf)-1);
                     if( bytes_read > 0 ) {
+                        rxMutex.lock();
                         int c= br.update(rxBuf);
-                        std::cout << "TSC: Received " << c << " new messages" << std::endl;
+                        rxMutex.unlock();
+                        Console::loge("TSC", "Received "+std::to_string(c)+" new messages");
                     }
                 }
             }
+
+            txMutex.lock();
+            if(!sendQueue.empty()){
+                std::string sendMsg= sendQueue[0];
+                sendQueue.erase(sendQueue.begin());
+
+                write(cli, sendMsg.c_str(), sendMsg.length());
+            }
+            txMutex.unlock();
 
             if(tim::now()-lastKASend>4000){
                 std::string kamsg= "$PNKPA*44\n";
@@ -77,12 +89,12 @@ void TCPSerialComm::exec() {
                 //close(cli);
             //}
         } else {
-            std::cout << "TSC: Waiting for client..." << std::endl;
+            Console::loge("TSC", "Waiting for client...!");
             int adrlen = sizeof(loc);
             cli = accept(soc, (struct sockaddr*)&rem, (socklen_t *)&adrlen);
-            char buf[1024];
+            char buf[128];
             inet_ntop(AF_INET, &rem.sin_addr, buf, sizeof(rem));
-            std::cout << "TSC: New client connected: " << std::string(buf) << std::endl;
+            Console::loge("TSC", "New client connected ("+std::string(buf)+")");
             lastKASend= tim::now();
             lastKARec= tim::now();
 
@@ -92,5 +104,27 @@ void TCPSerialComm::exec() {
             clientConnected= true;
         }
     }
+}
+
+std::string TCPSerialComm::popMessage() {
+    rxMutex.lock();
+    std::string msg= br.popMsg();
+    rxMutex.unlock();
+
+    return msg;
+}
+
+bool TCPSerialComm::msgsInQueue() {
+    rxMutex.lock();
+    bool r= (br.queueSize()>0);
+    rxMutex.unlock();
+
+    return r;
+}
+
+void TCPSerialComm::send(const std::string &msg) {
+    txMutex.lock();
+    sendQueue.emplace_back(msg);
+    txMutex.unlock();
 }
 

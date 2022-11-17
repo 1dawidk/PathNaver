@@ -5,6 +5,7 @@
 #include "Naver.h"
 #include "Geo/GeoPoint.h"
 #include "Geo/GeoRoute.h"
+#include "Console.h"
 
 Naver::Naver(LedGUI *ledgui, GNSSModule *gnssModule) {
     this->gui = ledgui;
@@ -39,10 +40,10 @@ void Naver::update() {
                 }
             }
 
+            // Logging
             if(lastMsgAt+1000 < tim::now()) {
-                std::cout << "My route: " << my_path_idx << ", offset: " << my_path.distanceTo(me) << "m, "
-                          << my_path.distanceToEnd(me)
-                          << "m left" << std::endl;
+                Console::logi("KML", "My route: "+std::to_string(my_path_idx)+", offset: "+std::to_string(my_path.distanceTo(me))+
+                                    "m, "+std::to_string(my_path.distanceToEnd(me))+"m left");
                 lastMsgAt = tim::now();
             }
         } else {

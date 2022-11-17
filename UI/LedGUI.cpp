@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "LedGUI.h"
+#include "../Console.h"
 
 
 LedGUI::LedGUI(int ledsNo, int maxShift) : leds(ledsNo) {
@@ -77,7 +78,7 @@ void LedGUI::exec() {
                 navSequence();
                 break;
             default: {
-                std::cout << "[WARN] LedGUI: Unknown mode!" << std::endl;
+                Console::logw("LedGUI", "Unknown mode!");
                 break;
             }
         }

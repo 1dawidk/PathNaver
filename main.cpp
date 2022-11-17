@@ -6,8 +6,10 @@
 #include "UI/LedGUI.h"
 #include "Naver.h"
 #include <csignal>
-#include "Communication/Bluetooth.h"
 #include "Communication/TCPSerialComm.h"
+#include "Console.h"
+#include "KMLWatcher.h"
+#include "Communication/Talker.h"
 
 #define COUNTDOWN_START_DISTANCE        300.0
 #define COUNTDOWN_STEP                  100.0
@@ -18,8 +20,15 @@ void configCLI(Args::CmdLine &cmd, char* call);
 
 bool runApp = true;
 void int_handler(int s){
-    printf("Caught signal %d\n",s);
+    printf("Caught signal int %d\n",s);
     runApp = false;
+    Console::stop();
+}
+
+void sigpipe_handler(int s){
+    printf("Caught signal pipe %d\n",s);
+    runApp = false;
+    Console::stop();
 }
 
 int main(int argc, char** argv) {
@@ -32,6 +41,18 @@ int main(int argc, char** argv) {
 
     sigaction(SIGINT, &sigIntHandler, nullptr);
     // ******************************
+
+    // *** Catch interrupt signal ***
+    struct sigaction sigPipeHandler{};
+
+    sigPipeHandler.sa_handler = sigpipe_handler;
+    sigemptyset(&sigPipeHandler.sa_mask);
+    sigPipeHandler.sa_flags = 0;
+
+    sigaction(SIGPIPE, &sigPipeHandler, nullptr);
+    // ******************************
+
+    Console::start();
 
     Args::CmdLine cmd( argc, argv );
     configCLI(cmd, argv[0]);
@@ -78,6 +99,24 @@ int main(int argc, char** argv) {
     int appState = APP_STATE_INIT_PATH;
 
     Naver naver(&gui, &gnss);
+    std::vector<std::string> kmls;
+
+    /**
+     * Should run threads for:
+     * - Navigator              |   -
+     * - LED GUI                |   +
+     * - KMLs watching process  |   +
+     * - Communication process  |   +
+     * - TSC                    |   +
+     * - MAIN THREAD            |   +
+     */
+
+    DeviceConfig deviceConfig;
+    KMLWatcher kmlWatcher;
+    Talker talker(&sc, &kmlWatcher, &deviceConfig);
+
+    kmlWatcher.start();
+    talker.start();
 
     while(runApp){
         switch (appState) { // NOLINT(hicpp-multiway-paths-covered)
@@ -88,21 +127,21 @@ int main(int argc, char** argv) {
                 if(cmd.isDefined("-i")){
                     kmlFilePath= cmd.value("-i");
                 } else {
-                    kmlFilePath= FlightPath::findKMLOnDrive();
+                    kmls= FlightPath::findKMLOnDrive();
+                    kmlFilePath= kmls[0];
                 }
                 if(!kmlFilePath.empty()) {
                     try {
-                        // std::cout << "[INFO] KML search result: " << kmlFilePath << std::endl;
                         fp = new FlightPath(kmlFilePath);
                         naver.loadPath(fp);
                         appState = APP_STATE_NAVIGATION;
                         fp->print();
                     } catch (const std::runtime_error &e) {
-                        // std::cout << e.what() << std::endl;
+                        Console::loge("main", e.what());
                         usleep(1000000);
                     }
                 } else {
-                    std::cout << "[ERR] No KML file defined nor found!" << std::endl;
+                    Console::loge("main", "No KML file defined nor found!");
                     usleep(1000000);
                 }
                 break;

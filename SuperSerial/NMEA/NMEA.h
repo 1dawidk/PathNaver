@@ -25,8 +25,10 @@ public:
 class NMEA {
 public:
     explicit NMEA(const std::string &s);
+    NMEA(const std::string &name, std::vector<std::string> &data);
     [[nodiscard]] std::string getName() const;
     std::string getValue(int i);
+    std::string toString();
 
     static std::string getChecksum(const std::string &msg);
     static std::string &makeupper(std::string &s);

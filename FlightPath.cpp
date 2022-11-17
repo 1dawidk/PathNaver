@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "FlightPath.h"
+#include "Console.h"
 
 auto FlightPath::file2char( const std::string &fil_path ) {
     std::ifstream file(fil_path);
@@ -64,7 +65,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
 
     rapidxml::xml_node <>* n;
     for(n = docNode->first_node(); n; n = n->next_sibling()) {
-        std::cout << "[INFO] Document sub node: " <<  n->name() << std::endl;
+        Console::logi("KML", "Document sub node: "+std::string(n->name()));
 
         if( std::string(n->name()) == "Placemark" ) {
             rapidxml::xml_node <>* lineStringNode= FlightPath::findNodeParameter(n, "LineString");
@@ -75,7 +76,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                 if(coordsNode != nullptr) {
                     std::string val = coordsNode->value();
                     std::vector<std::string> ps = SuperMisc::split(val, ' '); // Strings with point params
-                    std::cout << "[INFO]\tFound line with " << ps.size() << " points" << std::endl;
+                    Console::logi("KML", "Found line with "+std::to_string(ps.size())+" points");
                     for (auto &p: ps) {
 
                         SuperMisc::removeChar(p, '\n');
@@ -86,7 +87,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                             lat = std::stod(vals[1]);
                             lon = std::stod(vals[0]);
                             std::cout.precision(12);
-                            std::cout << "[INFO]\t\tParsed point: " << lat << ", " << lon << " [lat/lon]" << std::endl;
+                            Console::logi("KML", "Parsed point: "+std::to_string(lat)+", "+std::to_string(lon)+" [lat/lon]");
                             this->points.emplace_back(new GeoPoint(lat, lon));
 
                             if(this->points.size() > 1){
@@ -98,7 +99,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                 }
             }
         } else {
-            std::cout << "[INFO]\tInsignificant..." << std::endl;
+            Console::logi("KML", "Insignificant...");
         }
     }
 
@@ -107,9 +108,9 @@ int FlightPath::parseFile(const std::string &fil_path) {
 }
 
 void FlightPath::print() {
-    std::cout << "[INFO] Flight Route (" << points.size() << " points)" << std::endl;
+    Console::logi("KML", "Flight Route ("+std::to_string(points.size())+" points)");
     for(const auto& p: this->points){
-        std::cout << "[INFO]\t" << p->getLat() << " / " << p->getLon() << std::endl;
+        Console::logi("KML", std::to_string(p->getLat())+" / "+std::to_string(p->getLon()));
     }
 }
 
@@ -141,17 +142,14 @@ int FlightPath::getShiftDirection(const GeoPoint &p, int p_idx) {
     return path[p_idx]->getShiftDirection(p);
 }
 
-std::string FlightPath::findKMLOnDrive() {
-    std::string r= SuperMisc::exec("find /media/pi/ -name '*.kml'");
+std::vector<std::string> FlightPath::findKMLOnDrive() {
+    std::string r= SuperMisc::exec("find /home/dkulpa/ILOT/AirLid -name '*.kml'");
 
     if((r.find("find")==std::string::npos) and !r.empty()) {
         std::vector<std::string> lines = SuperMisc::split(r, '\n');
-        if(!lines.empty())
-            return lines[0];
-        else
-            return "";
+        return lines;
     } else {
-        return "";
+        return std::vector<std::string>();
     }
 }
 
