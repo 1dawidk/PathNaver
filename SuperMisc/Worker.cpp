@@ -19,6 +19,7 @@ void Worker::_exec() {
     while(run){
         loop();
     }
+    onStop();
 }
 
 Worker::~Worker() {
@@ -28,10 +29,18 @@ Worker::~Worker() {
 
 void Worker::stop() {
     run = false;
-    if(h != nullptr)
+    if( (h != nullptr) and (h->joinable()))
         h->join();
 }
 
 void Worker::onStart() {
 
+}
+
+void Worker::onStop() {
+
+}
+
+void Worker::sleep(unsigned long ms) {
+    std::this_thread::sleep_for(std::chrono::microseconds(1000*ms));
 }

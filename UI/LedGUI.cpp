@@ -2,7 +2,6 @@
 // Created by dkulpa on 09.08.2022.
 //
 
-#include <iostream>
 #include "LedGUI.h"
 #include "../Console.h"
 
@@ -13,7 +12,6 @@ LedGUI::LedGUI(int ledsNo, int maxShift) : leds(ledsNo) {
     this->carouselPos = 0;
     this->carouselDir = 1;
     this->navLedIdx = 0;
-    this->run = false;
     this->mode = 0;
     this->routeShift = 0;
     this->initBlinkState = 0;
@@ -22,7 +20,6 @@ LedGUI::LedGUI(int ledsNo, int maxShift) : leds(ledsNo) {
     this->navBlinkFinishChangeAt = 0;
     this->navCountdown = -1;
     this->sidePanelMode = SIDE_PANEL_MODE_EMPTY;
-    this->run = true;
 }
 
 
@@ -45,19 +42,6 @@ void LedGUI::setMode(int m) {
     vals_mutex.unlock();
 }
 
-void LedGUI::stop() {
-    run_mutex.lock();
-    this->run = false;
-    run_mutex.unlock();
-}
-
-bool LedGUI::getRunFlag() {
-    run_mutex.lock();
-    bool r= run;
-    run_mutex.unlock();
-    return r;
-}
-
 int LedGUI::getMode() {
     vals_mutex.lock();
     int m = mode;
@@ -65,27 +49,28 @@ int LedGUI::getMode() {
     return m;
 }
 
-void LedGUI::exec() {
-    while(this->getRunFlag()) {
-        switch (this->getMode()) {
-            case LedGUI::MODE_INIT:
-                initSequence();
-                break;
-            case LedGUI::MODE_CAROUSEL:
-                carouselSequence();
-                break;
-            case LedGUI::MODE_NAV:
-                navSequence();
-                break;
-            default: {
-                Console::logw("LedGUI", "Unknown mode!");
-                break;
-            }
+void LedGUI::onStart() {
+    Worker::onStart();
+}
+
+void LedGUI::loop() {
+    switch (this->getMode()) {
+        case LedGUI::MODE_INIT:
+            initSequence();
+            break;
+        case LedGUI::MODE_CAROUSEL:
+            carouselSequence();
+            break;
+        case LedGUI::MODE_NAV:
+            navSequence();
+            break;
+        default: {
+            Console::logw("LedGUI", "Unknown mode!");
+            break;
         }
-
-        leds.render();
-
     }
+
+    leds.render();
 }
 
 void LedGUI::setRouteShift(double shift) {
@@ -197,3 +182,7 @@ void LedGUI::setNavCountdown(char v) {
     sidePanelMode = SIDE_PANEL_MODE_COUNTDOWN;
     run_mutex.unlock();
 }
+
+
+
+

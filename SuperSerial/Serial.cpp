@@ -13,18 +13,15 @@ Serial::Serial(const std::string &port, unsigned int baudrate) {
 
 int Serial::start() {
     if(this->baudrate < 0){
-        std::cout << "Wrong baudrate value" << std::endl;
         return -3;
     }
 
     this->fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);		//Open in non blocking read/write mode
     if (this->fd == -1) {
-        std::cout << "Cannot open port " << port << std::endl;
         return -1;
     }
 
     if( configPort()!=0 ){
-        std::cout << "Cannot configure port " << port << std::endl;
         return -2;
     }
 

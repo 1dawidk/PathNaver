@@ -10,6 +10,7 @@
 #include "string"
 #include "vector"
 #include "SuperMisc.h"
+#include "NMEAData.h"
 
 class NMEAFormatException : public std::exception {
 private:
@@ -25,7 +26,7 @@ public:
 class NMEA {
 public:
     explicit NMEA(const std::string &s);
-    NMEA(const std::string &name, std::vector<std::string> &data);
+    NMEA(const std::string &name, const NMEAData &data);
     [[nodiscard]] std::string getName() const;
     std::string getValue(int i);
     std::string toString();
@@ -36,7 +37,7 @@ public:
 private:
     static void cleanupMessage(std::string &msg);
     std::string name;
-    std::vector<std::string> data;
+    NMEAData data;
     std::string checksum;
 };
 

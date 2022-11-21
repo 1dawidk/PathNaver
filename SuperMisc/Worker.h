@@ -20,6 +20,9 @@ public:
 protected:
     virtual void onStart();
     virtual void loop() = 0;
+    virtual void onStop();
+
+    static void sleep(unsigned long ms);
 
 private:
     std::thread *h;

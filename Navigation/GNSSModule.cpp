@@ -4,8 +4,8 @@
 
 #include <NMEA/NMEA.h>
 #include "GNSSModule.h"
-#include "Geo/GeoCalc.h"
-#include "Console.h"
+#include "../Geo/GeoCalc.h"
+#include "../Console.h"
 
 GNSSModule::GNSSModule(int baudrate, bool verbose, const std::string &port) {
     this->baudrate = baudrate;
@@ -13,10 +13,9 @@ GNSSModule::GNSSModule(int baudrate, bool verbose, const std::string &port) {
     this->port = port;
     this->buffer_started = false;
     this->serial_buffer = nullptr;
-    this->lat = 52.1799270067;
-    this->lng = 20.94973112;
-    this->heading = 0;
-    this->fix = false;
+    fix = false;
+
+    dataMutex.unlock();
 
     if(port.empty()){
         fixed_port = false;
@@ -38,7 +37,7 @@ bool GNSSModule::find() {
     return !this->port.empty();
 }
 
-void GNSSModule::startBuffer() {
+bool GNSSModule::startBuffer() {
     if(this->port.empty()){
         this->find();
     }
@@ -46,11 +45,49 @@ void GNSSModule::startBuffer() {
     if(!this->port.empty()){
         this->serial_buffer = new SerialBuffer(this->port, this->baudrate, 2048);
         this->buffer_started = true;
+        return true;
     }
+
+    return false;
 }
 
-void GNSSModule::update() {
-    if((this->serial_buffer!= nullptr) && buffer_started) {
+bool GNSSModule::hasFix() {
+    dataMutex.lock();
+    bool f= fix;
+    dataMutex.unlock();
+
+    return f;
+}
+
+GNSSData GNSSModule::getData() {
+    dataMutex.lock();
+    GNSSData d = gnssData;
+    dataMutex.unlock();
+
+    return d;
+}
+
+void GNSSModule::cleanup() {
+    dataMutex.lock();
+    fix = false;
+    dataMutex.unlock();
+
+    if(serial_buffer != nullptr) {
+        if (this->verbose)
+            Console::logi("GNSSModule", "Closing serial...");
+        serial_buffer->close();
+        delete serial_buffer;
+        serial_buffer = nullptr;
+    }
+    buffer_started= false;
+
+    if(!fixed_port)
+        this->port = "";
+}
+
+void GNSSModule::loop() {
+    // Serial open
+    if((this->serial_buffer!= nullptr) && serial_buffer->isOpen() && buffer_started) {
         std::string ret = this->serial_buffer->update();
         if (!ret.empty()) {
             try {
@@ -64,15 +101,18 @@ void GNSSModule::update() {
                     int lngd = std::stoi(data[5].substr(0, 3));
                     double lngm = std::stod(data[5].substr(3));
 
-                    double llat= lat;
-                    double llng= lng;
-                    this->lat = (double)latd + latm/60.0;
-                    this->lng = (double)lngd + lngm/60.0;
-                    //this->heading = std::stod(data[8]);
-                    this->heading = GeoCalc::calcHeading(GeoPoint(llat, llng), GeoPoint(lat, lng));
-                    this->fix = true;
+                    double llat= gnssData.getLat();
+                    double llng= gnssData.getLng();
+                    dataMutex.lock();
+                    gnssData.setLat( (double)latd + latm/60.0 );
+                    gnssData.setLng((double)lngd + lngm/60.0);
+                    gnssData.setHeading(GeoCalc::calcHeading(GeoPoint(llat, llng), GeoPoint(gnssData.getLat(), gnssData.getLng())));
+                    fix = true;
+                    dataMutex.unlock();
                 } else {
-                    this->fix = false;
+                    dataMutex.lock();
+                    fix = false;
+                    dataMutex.unlock();
                 }
             } catch (std::invalid_argument &e) {
                 if (this->verbose)
@@ -86,40 +126,22 @@ void GNSSModule::update() {
             if(!serial_buffer->isOpen()){
                 Console::logw("GNSSModule", "Disconnected! Cleanup!");
                 cleanup();
+                Worker::sleep(3000);
             }
         }
     }
-}
-
-bool GNSSModule::isOpen() const {
-    return (serial_buffer!= nullptr) && buffer_started && serial_buffer->isOpen();
-}
-
-double GNSSModule::getLat() const {
-    return lat;
-}
-
-double GNSSModule::getLng() const {
-    return lng;
-}
-
-double GNSSModule::getHeading() const {
-    return heading;
-}
-
-bool GNSSModule::hasFix() const {
-    return fix;
-}
-
-void GNSSModule::cleanup() {
-    this->fix= false;
-    if(serial_buffer != nullptr) {
-        Console::logi("GNSSModule", "Closing serial...");
-        serial_buffer->close();
-        delete serial_buffer;
+    // Serial not open
+    else {
+        cleanup();
+        if(!startBuffer()){
+            Console::loge("GNSSModule", "Cannot open gnss module serial!");
+            Worker::sleep(3000);
+        }
     }
-    buffer_started= false;
 
-    if(!fixed_port)
-        this->port = "";
+    Worker::sleep(50);
+}
+
+void GNSSModule::onStop() {
+    cleanup();
 }

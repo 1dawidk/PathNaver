@@ -7,13 +7,18 @@
 
 
 #include "TCPSerialComm.h"
-#include "../Worker.h"
-#include "../KMLWatcher.h"
+#include "Worker.h"
+#include "../Navigation/KMLWatcher.h"
 #include "../DeviceConfig.h"
+#include "../Console.h"
+#include "../Navigation/Naver.h"
+#include <NMEA/NMEA.h>
+
+#define TALKER_PNLID_INTERVAL_MS   2000
 
 class Talker : public Worker{
 public:
-    explicit Talker(TCPSerialComm *tsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig);
+    explicit Talker(TCPSerialComm *tsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig, Naver *naver);
 
 protected:
     void loop() override;
@@ -22,6 +27,9 @@ private:
     TCPSerialComm *tsc;
     KMLWatcher *kmlWatcher;
     DeviceConfig *deviceConfig;
+    Naver* naver;
+
+    ulong lastPNLIDSend;
 };
 
 

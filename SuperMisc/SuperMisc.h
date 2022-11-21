@@ -20,5 +20,4 @@ namespace SuperMisc{
     void removeChar(std::string &s, char c);
 }
 
-
 #endif //UINS_CPP_SUPERMISC_H

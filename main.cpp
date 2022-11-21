@@ -1,14 +1,14 @@
 #include <iostream>
 #include <thread>
 #include "args-parser/all.hpp"
-#include "GNSSModule.h"
-#include "FlightPath.h"
+#include "Navigation/GNSSModule.h"
+#include "Navigation/FlightPath.h"
 #include "UI/LedGUI.h"
-#include "Naver.h"
+#include "Navigation/Naver.h"
 #include <csignal>
 #include "Communication/TCPSerialComm.h"
 #include "Console.h"
-#include "KMLWatcher.h"
+#include "Navigation/KMLWatcher.h"
 #include "Communication/Talker.h"
 
 #define COUNTDOWN_START_DISTANCE        300.0
@@ -16,67 +16,39 @@
 #define FINISH_BLINK_START_DISTANCE     40.0
 #define OFFSET_MAX                      150
 
-void configCLI(Args::CmdLine &cmd, char* call);
-
 bool runApp = true;
-void int_handler(int s){
-    printf("Caught signal int %d\n",s);
-    runApp = false;
-    Console::stop();
-}
 
-void sigpipe_handler(int s){
-    printf("Caught signal pipe %d\n",s);
-    runApp = false;
-    Console::stop();
-}
+struct sigaction sigIntHandler{};
+struct sigaction sigTermHandler{};
+struct sigaction sigPipeHandler{};
+
+void configCLI(Args::CmdLine &cmd, char* call);
+void configSigCatch();
+void stopApp(int s);
 
 int main(int argc, char** argv) {
-    // *** Catch interrupt signal ***
-    struct sigaction sigIntHandler{};
+    // Prepare signal catchers
+    configSigCatch();
 
-    sigIntHandler.sa_handler = int_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-
-    sigaction(SIGINT, &sigIntHandler, nullptr);
-    // ******************************
-
-    // *** Catch interrupt signal ***
-    struct sigaction sigPipeHandler{};
-
-    sigPipeHandler.sa_handler = sigpipe_handler;
-    sigemptyset(&sigPipeHandler.sa_mask);
-    sigPipeHandler.sa_flags = 0;
-
-    sigaction(SIGPIPE, &sigPipeHandler, nullptr);
-    // ******************************
-
-    Console::start();
-
+    // Prepare command line arguments parser
     Args::CmdLine cmd( argc, argv );
     configCLI(cmd, argv[0]);
+
+    // Prepare custom console log system
+    Console::start();
 
     // Try to parse args
     try {
         cmd.parse();
     } catch (const Args::HelpHasBeenPrintedException &e){
         std::cout << e.desc() << std::endl;
+        Console::stop();
         return 0;
     } catch (const Args::BaseException &e){
         std::cout << e.desc() << std::endl;
+        Console::stop();
         return 0;
     }
-
-    // Empty flight path object
-    FlightPath *fp;
-
-    // Prepare led string
-    LedGUI gui(39, OFFSET_MAX); // Leds number and max shift in meters
-
-    // Prepare bluetooth interface
-    TCPSerialComm sc;
-    sc.start();
 
     // Probe verbose arg
     bool verbose = cmd.isDefined("-v");
@@ -86,37 +58,43 @@ int main(int argc, char** argv) {
     if(cmd.isDefined("-d"))
         device = cmd.value("-d");
 
-    // Create and init eMLID device
-    auto gnss = GNSSModule(std::stoi(cmd.value("-b")), verbose, device);
-
-    /*** MAIN LOOP ***/
-    std::thread uiThd(&LedGUI::exec, &gui);
-    std::thread scThd(&TCPSerialComm::exec, &sc);
-
-    const int APP_STATE_INIT_PATH = 1;
-    const int APP_STATE_NAVIGATION = 3;
-
-    int appState = APP_STATE_INIT_PATH;
-
-    Naver naver(&gui, &gnss);
-    std::vector<std::string> kmls;
-
     /**
      * Should run threads for:
-     * - Navigator              |   -
+     * - GNSS Module process    |   +
+     * - Navigator              |   +
      * - LED GUI                |   +
      * - KMLs watching process  |   +
      * - Communication process  |   +
      * - TSC                    |   +
      * - MAIN THREAD            |   +
      */
+    // Empty flight path object
+    FlightPath *fp;
 
+    // Prepare led string gui
+    LedGUI gui(39, OFFSET_MAX); // Leds number and max shift in meters
+    gui.start();
+
+    GNSSModule gnss(std::stoi(cmd.value("-b")), verbose, device);
+    Naver naver(&gui, &gnss);
+    TCPSerialComm sc;
     DeviceConfig deviceConfig;
     KMLWatcher kmlWatcher;
-    Talker talker(&sc, &kmlWatcher, &deviceConfig);
+    Talker talker(&sc, &kmlWatcher, &deviceConfig, &naver);
 
+    gnss.start();
+    naver.start();
+    sc.start();
     kmlWatcher.start();
     talker.start();
+
+    /*** MAIN LOOP ***/
+    const int APP_STATE_INIT_PATH = 1;
+    const int APP_STATE_NAVIGATION = 3;
+
+    int appState = APP_STATE_INIT_PATH;
+
+    std::vector<std::string> kmls;
 
     while(runApp){
         switch (appState) { // NOLINT(hicpp-multiway-paths-covered)
@@ -134,6 +112,7 @@ int main(int argc, char** argv) {
                     try {
                         fp = new FlightPath(kmlFilePath);
                         naver.loadPath(fp);
+                        naver.resume();
                         appState = APP_STATE_NAVIGATION;
                         fp->print();
                     } catch (const std::runtime_error &e) {
@@ -147,15 +126,25 @@ int main(int argc, char** argv) {
                 break;
             }
             case APP_STATE_NAVIGATION:{
-                naver.update();
                 break;
             }
         }
 
-        usleep(100000); // 100ms
+        usleep(1000*100); // 100ms
     }
 
+    Console::logi("main", "Stopping threads...");
+    naver.stop();
+    gnss.stop();
+    kmlWatcher.stop();
+    talker.stop();
     gui.stop();
+    sc.stop();
+    Console::logi("main", "Workers stopped");
+    Console::stop();
+    std::cout << "Console stopped! Bye, bye!" << std::endl;
+
+    return 0;
 }
 
 void configCLI(Args::CmdLine &cmd, char* call){
@@ -164,4 +153,34 @@ void configCLI(Args::CmdLine &cmd, char* call){
             .addArgWithFlagAndName( 'i', "input", true, false, "input file path", " input kml file path with defined flight route", "", "PATH" )
             .addArgWithFlagAndName('v', "verbose", false, false, "verbose",  "increase verbose level")
             .addHelp( true, call, "Path Naver" );
+}
+
+void configSigCatch(){
+    // *** Catch INTERRUPT signal ***
+    sigIntHandler.sa_handler = stopApp;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, nullptr);
+    // ******************************
+
+    // *** Catch TERMINATE signal ***
+    sigTermHandler.sa_handler = stopApp;
+    sigemptyset(&sigTermHandler.sa_mask);
+    sigTermHandler.sa_flags = 0;
+
+    sigaction(SIGTERM, &sigTermHandler, nullptr);
+    // ******************************
+
+    // *** Catch PIPE signal ***
+    sigPipeHandler.sa_handler = stopApp;
+    sigemptyset(&sigPipeHandler.sa_mask);
+    sigPipeHandler.sa_flags = 0;
+
+    sigaction(SIGPIPE, &sigPipeHandler, nullptr);
+    // ******************************
+}
+
+void stopApp([[maybe_unused]] int s){
+    std::cout << "Caught sig " << s << std::endl;
+    runApp = false;
 }

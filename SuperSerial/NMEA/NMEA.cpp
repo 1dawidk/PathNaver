@@ -15,8 +15,6 @@ NMEA::NMEA(const std::string &s) {
         throw NMEAFormatException("NMEA format corrupted! (Message too short)");
     else if(msg[0]!='$')
         throw NMEAFormatException("NMEA format corrupted! ($ not found)");
-    else if(fs == std::string::npos)
-        throw NMEAFormatException("NMEA format corrupted! (First separator not found)");
     else if(msg[term] != '*'){
         throw NMEAFormatException("NMEA format corrupted! (Terminator not found)");
     }else {
@@ -25,18 +23,20 @@ NMEA::NMEA(const std::string &s) {
             throw NMEAFormatException("NMEA format corrupted! (Checksum invalid)");
     }
 
-    this->name = msg.substr(1, fs-1);
-    this->data = SuperMisc::split(msg.substr(fs+1), ',');
+    if(fs == std::string::npos){
+        this->name = msg.substr(1, term-1);
+        this->data = NMEAData();
+    } else {
+        this->name = msg.substr(1, fs - 1);
+        this->data = NMEAData(SuperMisc::split(msg.substr(fs + 1), ','));
+    }
 }
 
-NMEA::NMEA(const std::string &name, std::vector<std::string> &data) {
+NMEA::NMEA(const std::string &name, const NMEAData &data) {
     this->name= name;
     this->data= data;
-    std::string raw= name;
-    for(const std::string &d: data){
-        raw+= ","+d;
-    }
 
+    std::string raw= name+","+data.toString();
     this->checksum= getChecksum(raw);
 }
 
@@ -74,14 +74,11 @@ void NMEA::cleanupMessage(std::string &msg) {
 }
 
 std::string NMEA::getValue(int i) {
-    return this->data[i];
+    return data.get(i);
 }
 
 std::string NMEA::toString() {
-    std::string raw = "$" + this->name;
-    for(const std::string d: data){
-        raw += "," + d;
-    }
+    std::string raw = "$" + this->name+","+this->data.toString();
     raw += "*" + this->checksum + "\n";
 
     return raw;

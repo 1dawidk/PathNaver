@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include "FlightPath.h"
-#include "Console.h"
+#include "../Console.h"
 
 auto FlightPath::file2char( const std::string &fil_path ) {
     std::ifstream file(fil_path);

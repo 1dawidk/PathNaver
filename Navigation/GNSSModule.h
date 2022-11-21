@@ -8,34 +8,37 @@
 #include <SerialBuffer.h>
 #include <SuperSerial.h>
 #include <vector>
+#include <mutex>
 #include "string"
+#include "Worker.h"
+#include "GNSSData.h"
 
-
-class GNSSModule {
+class GNSSModule : public Worker {
 public:
     explicit GNSSModule(int baudrate, bool verbose=true, const std::string &port="");
-    bool find();
-    void startBuffer();
-    void update();
-    void cleanup();
 
-    [[nodiscard]] bool isOpen() const;
-    [[nodiscard]] double getLat() const;
-    [[nodiscard]] double getLng() const;
-    [[nodiscard]] double getHeading() const;
-    [[nodiscard]] bool hasFix() const;
+    [[nodiscard]] bool hasFix();
+    [[nodiscard]] GNSSData getData();
+
+protected:
+    void loop() override;
+    void onStop() override;
 
 private:
+    bool find();
+    bool startBuffer();
+    void cleanup();
+
     bool fix;
-    double lat;
-    double lng;
-    double heading;
+    GNSSData gnssData;
     int baudrate;
     bool verbose;
     std::string port;
     bool fixed_port;
     SerialBuffer *serial_buffer;
     bool buffer_started;
+
+    std::mutex dataMutex;
 };
 
 

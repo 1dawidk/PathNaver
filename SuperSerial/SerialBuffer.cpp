@@ -42,6 +42,8 @@ bool SerialBuffer::isOpen() {
 }
 
 void SerialBuffer::close() {
-    this->serial->stop();
+    if(serial != nullptr) {
+        this->serial->stop();
+    }
     buffer= "";
 }

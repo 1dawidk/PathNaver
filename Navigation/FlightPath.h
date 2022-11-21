@@ -6,13 +6,13 @@
 #define PATHNAVER_FLIGHTPATH_H
 
 #include "string"
-#include "rapidxml//rapidxml.hpp"
+#include "../rapidxml/rapidxml.hpp"
 #include "fstream"
 #include <memory>
 #include <vector>
-#include "Geo/GeoPoint.h"
+#include "../Geo/GeoPoint.h"
 #include "SuperMisc.h"
-#include "Geo/GeoRoute.h"
+#include "../Geo/GeoRoute.h"
 
 class FlightPath {
 public:

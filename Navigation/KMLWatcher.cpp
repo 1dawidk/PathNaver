@@ -27,10 +27,12 @@ int KMLWatcher::countFound() {
 
 std::string KMLWatcher::getFileName(int idx) {
     kmlsMutex.lock();
-    std::string s = kmls[idx];
+    std::string path = kmls[idx];
     kmlsMutex.unlock();
+
+    size_t start = path.rfind('/');
+    size_t end = path.rfind('.');
+    std::string s = path.substr(start+1, end-start-1);
 
     return s;
 }
-
-

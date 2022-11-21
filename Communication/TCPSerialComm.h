@@ -14,14 +14,17 @@
 #include "thread"
 #include "cstring"
 #include "BufferedReader.h"
+#include "Worker.h"
+#include <tim.h>
+#include <sys/poll.h>
+#include "../Console.h"
 
 typedef struct sockaddr_in sockaddr_in_t;
+typedef struct pollfd pollfd_t;
 
-class TCPSerialComm {
+class TCPSerialComm : public Worker{
 public:
-    TCPSerialComm();
-    bool start();
-    void exec();
+    explicit TCPSerialComm();
 
     // Receive
     std::string popMessage();
@@ -29,22 +32,32 @@ public:
 
     // Send
     void send(const std::string &msg);
+    bool isConnected() const;
+
+protected:
+    void onStart() override;
+    void loop() override;
 
 private:
-    sockaddr_in_t loc;
-    sockaddr_in_t rem;
-    int soc;
-    int cli;
+    sockaddr_in_t loc{};
+    sockaddr_in_t rem{};
+    int soc{};
+    int cli{};
+    pollfd_t pfd{};    // Messages listening pfd
+    pollfd_t apfd{};   // Accept listening pfd
+
+    ulong lastKASend{};
+    ulong lastKARec{};
+
+    bool saidWaiting{};
 
     BufferedReader br;
     std::vector<std::string> sendQueue;
 
-    bool run;
-    bool clientConnected;
+    bool clientConnected{};
 
     std::mutex rxMutex;
     std::mutex txMutex;
-    std::thread *kaThd;
 };
 
 

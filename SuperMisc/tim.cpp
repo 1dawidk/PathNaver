@@ -23,8 +23,19 @@ std::string tim::format(unsigned long ts, bool date, bool time, bool ms){
         fmt+= "%d-%m-%Y";
     if(time)
         fmt+= "%H:%M:%S";
-    if(ms)
-        oss << "." << std::put_time(&tm, fmt.c_str()) << (ts%1000);
+
+    oss << std::put_time(&tm, fmt.c_str());
+
+    if(ms) {
+        ulong millisec = ts % 1000;
+        oss << ".";
+        if(millisec < 100)
+            oss << "0";
+        if(millisec < 10)
+            oss << "0";
+        oss << (ts % 1000);
+    }
+
     auto r = oss.str();
 
     return r;

@@ -11,25 +11,21 @@
 #include <chrono>
 #include "tim.h"
 #include "WS281xStrip.h"
+#include "Worker.h"
 
 #define LED_CLEAR       0
 #define LED_COLOR_BLUE  0x00ff0000
 #define LED_COLOR_RED   0x000000ff
 #define LED_COLOR_GREEN 0x0000ff00
 
-class LedGUI {
+class LedGUI : public Worker {
 public:
     LedGUI(int ledsNo, int maxShift); // Max shift in meters
-
-    // Run mechanism
-    void exec();
-    void stop();
 
     // Getters, setters
     void setMode(int m);
     void setRouteShift(double shift);
     double getRouteShift();
-    bool getRunFlag();
     int getMode();
     void blinkFinish();
     void setNavCountdown(char v);
@@ -40,10 +36,13 @@ public:
     static const int MODE_CAROUSEL = 1;
     static const int MODE_NAV = 2;
 
+protected:
+    void onStart() override;
+    void loop() override;
+
 private:
     static const char SIDE_PANEL_SIZE = 3;
     std::mutex run_mutex;
-    bool run;
     std::mutex vals_mutex;
     int mode;
     double routeShift;
