@@ -17,6 +17,8 @@ auto FlightPath::file2char( const std::string &fil_path ) {
 
     std::unique_ptr < char[] > fileContext( new char[ fileSize + static_cast < decltype( fileSize ) >( 1 ) ] );
     file.read( fileContext.get(), fileSize );
+    fileContext.get()[fileSize]= 0;
+    file.close();
 
     return fileContext;
 }
@@ -55,17 +57,25 @@ int FlightPath::parseFile(const std::string &fil_path) {
     if(std::string(docNode->name()) == "kml"){
         docNode = docNode->first_node();
     } else {
-        std::cerr << "[ERR] Incorrect KML format!" << std::endl;
+        Console::loge("FlightPath", "Incorrect KML format!");
         return - 2;
     }
 
+    if(docNode == nullptr){
+        Console::loge("FlightPath", "Incorrect KML format!");
+        return -3;
+    }
     while (std::string(docNode->name()) != "Document"){
         docNode = docNode->next_sibling();
+        if(docNode== nullptr){
+            Console::loge("FlightPath", "Incorrect KML format!");
+            return -4;
+        }
     }
 
     rapidxml::xml_node <>* n;
     for(n = docNode->first_node(); n; n = n->next_sibling()) {
-        Console::logi("KML", "Document sub node: "+std::string(n->name()));
+        //Console::logi("KML", "Document sub node: "+std::string(n->name()));
 
         if( std::string(n->name()) == "Placemark" ) {
             rapidxml::xml_node <>* lineStringNode= FlightPath::findNodeParameter(n, "LineString");
@@ -76,7 +86,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                 if(coordsNode != nullptr) {
                     std::string val = coordsNode->value();
                     std::vector<std::string> ps = SuperMisc::split(val, ' '); // Strings with point params
-                    Console::logi("KML", "Found line with "+std::to_string(ps.size())+" points");
+                    //Console::logi("KML", "Found line with "+std::to_string(ps.size())+" points");
                     for (auto &p: ps) {
 
                         SuperMisc::removeChar(p, '\n');
@@ -87,7 +97,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                             lat = std::stod(vals[1]);
                             lon = std::stod(vals[0]);
                             std::cout.precision(12);
-                            Console::logi("KML", "Parsed point: "+std::to_string(lat)+", "+std::to_string(lon)+" [lat/lon]");
+                            //Console::logi("KML", "Parsed point: "+std::to_string(lat)+", "+std::to_string(lon)+" [lat/lon]");
                             this->points.emplace_back(new GeoPoint(lat, lon));
 
                             if(this->points.size() > 1){
@@ -99,7 +109,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
                 }
             }
         } else {
-            Console::logi("KML", "Insignificant...");
+            //Console::logi("KML", "Insignificant...");
         }
     }
 
@@ -108,9 +118,9 @@ int FlightPath::parseFile(const std::string &fil_path) {
 }
 
 void FlightPath::print() {
-    Console::logi("KML", "Flight Route ("+std::to_string(points.size())+" points)");
+    //Console::logi("KML", "Flight Route ("+std::to_string(points.size())+" points)");
     for(const auto& p: this->points){
-        Console::logi("KML", std::to_string(p->getLat())+" / "+std::to_string(p->getLon()));
+        //Console::logi("KML", std::to_string(p->getLat())+" / "+std::to_string(p->getLon()));
     }
 }
 
@@ -142,17 +152,14 @@ int FlightPath::getShiftDirection(const GeoPoint &p, int p_idx) {
     return path[p_idx]->getShiftDirection(p);
 }
 
-std::vector<std::string> FlightPath::findKMLOnDrive() {
-    std::string r= SuperMisc::exec("find /home/dkulpa/ILOT/AirLid -name '*.kml'");
-
-    if((r.find("find")==std::string::npos) and !r.empty()) {
-        std::vector<std::string> lines = SuperMisc::split(r, '\n');
-        return lines;
-    } else {
-        return std::vector<std::string>();
-    }
-}
-
 GeoRoute FlightPath::getRoute(int idx) {
     return GeoRoute(*path[idx]);
+}
+
+int FlightPath::countPoints() {
+    return points.size();
+}
+
+GeoPoint* FlightPath::getPoint(int idx) {
+    return points[idx];
 }

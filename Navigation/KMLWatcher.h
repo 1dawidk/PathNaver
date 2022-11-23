@@ -10,12 +10,17 @@
 #include <mutex>
 #include "Worker.h"
 #include "string"
+#include "FlightPath.h"
+#include "unistd.h"
 
 class KMLWatcher : public Worker{
 public:
     int countFound();
     std::string getFileName(int idx);
 
+    FlightPath getFlightPath(int idx);
+
+    static std::vector<std::string> findKMLOnDrive();
 protected:
     void onStart() override;
     void loop() override;

@@ -11,9 +11,9 @@ GeoRoute::GeoRoute(const GeoPoint &p1, const GeoPoint &p2) : start(p2), end(p1) 
     b = p1.getLat() - (p1.getLon() * a);
 
     hdg = GeoCalc::calcHeading(p2, p1);
-    Console::logi("GeoRoute", "Route: a= "+std::to_string(a)+", b= "+std::to_string(b)+", hdg= "+std::to_string(hdg));
-    Console::logi("GeoRoute", "\tstart: "+std::to_string(start.getLat())+", "+std::to_string(start.getLon()));
-    Console::logi("GeoRoute", "\tend: "+std::to_string(end.getLat())+", "+std::to_string(end.getLon()));
+    //Console::logi("GeoRoute", "Route: a= "+std::to_string(a)+", b= "+std::to_string(b)+", hdg= "+std::to_string(hdg));
+    //Console::logi("GeoRoute", "\tstart: "+std::to_string(start.getLat())+", "+std::to_string(start.getLon()));
+    //Console::logi("GeoRoute", "\tend: "+std::to_string(end.getLat())+", "+std::to_string(end.getLon()));
 }
 
 double GeoRoute::getHeading() const {

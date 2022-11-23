@@ -2,7 +2,6 @@
 // Created by dkulpa on 15.11.2022.
 //
 
-#include <iostream>
 #include "BufferedReader.h"
 #include "../Console.h"
 
@@ -23,7 +22,6 @@ int BufferedReader::update(char *rx) {
     rxBuffHead+= strlen(rx);
     *rxBuffHead= 0;
 
-
     char *endlPos = strchr(rxBuff, '\n');
     while(endlPos != nullptr){
         char msgBuff[BUFFEREDREADER_MAX_BUFFER_SIZE];
@@ -31,13 +29,14 @@ int BufferedReader::update(char *rx) {
         msgBuff[endlPos-rxBuff] = 0;
 
         msgs.emplace_back(msgBuff);
+        Console::logi("BufferedReader", msgBuff);
         if(msgs.size() > BUFFEREDREADER_MAX_QUEUE_SIZE){
             msgs.erase(msgs.begin());
         }
 
         msgCnt++;
-        memmove(rxBuff, endlPos+1, rxBuffHead-endlPos);
-        rxBuffHead-= (rxBuffHead-endlPos);
+        memmove(rxBuff, endlPos+1, endlPos-rxBuff);
+        rxBuffHead-= (endlPos-rxBuff+1);
         endlPos = strchr(rxBuff, '\n');
     }
 
@@ -56,5 +55,5 @@ std::string BufferedReader::popMsg() {
 }
 
 int BufferedReader::queueSize() {
-    return msgs.size();
+    return static_cast<int>(msgs.size());
 }

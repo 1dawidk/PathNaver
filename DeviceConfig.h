@@ -21,11 +21,15 @@ class DeviceConfig {
 public:
     DeviceConfig();
 
-    void setSelectedKml(const std::string &v);
-    std::string getSelectedKml();
+    void setSelectedPathId(int v);
+    int getSelectedPathId();
+
+    bool hasChanged();
 private:
-    std::string selectedKml;
+    int selectedPathId;
     std::mutex changeMutex;
+
+    bool stateChanged;
 };
 
 

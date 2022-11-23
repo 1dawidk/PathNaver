@@ -5,13 +5,25 @@
 #include "DeviceConfig.h"
 
 DeviceConfig::DeviceConfig() {
+    selectedPathId= 0;
     changeMutex.unlock();
+    stateChanged= true;
 }
 
-void DeviceConfig::setSelectedKml(const std::string &v) {
-    SET_THREAD_SAFE(changeMutex, selectedKml, v);
+void DeviceConfig::setSelectedPathId(int v) {
+    SET_THREAD_SAFE(changeMutex, stateChanged, true);
+    SET_THREAD_SAFE(changeMutex, selectedPathId, v);
 }
 
-std::string DeviceConfig::getSelectedKml() {
-    RETURN_THREAD_SAFE(changeMutex, std::string, selectedKml);
+int DeviceConfig::getSelectedPathId() {
+    RETURN_THREAD_SAFE(changeMutex, int, selectedPathId);
+}
+
+bool DeviceConfig::hasChanged() {
+    changeMutex.lock();
+    bool v= stateChanged;
+    stateChanged= false;
+    changeMutex.unlock();
+
+    return v;
 }

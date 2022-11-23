@@ -5,7 +5,12 @@
 #include "NMEA.h"
 
 NMEA::NMEA(const std::string &s) {
-    std::string msg = s;
+    size_t start= s.find('$');
+
+    if(start == std::string::npos)
+        throw NMEAFormatException("NMEA format corrupted! ($ not found)");
+
+    std::string msg = s.substr(start);
     NMEA::cleanupMessage(msg);
 
     size_t fs = msg.find(',');
@@ -19,8 +24,12 @@ NMEA::NMEA(const std::string &s) {
         throw NMEAFormatException("NMEA format corrupted! (Terminator not found)");
     }else {
         this->checksum = msg.substr(term+1);
-        if(NMEA::getChecksum(msg) != makeupper(this->checksum))
-            throw NMEAFormatException("NMEA format corrupted! (Checksum invalid)");
+        if(NMEA::getChecksum(msg) != makeupper(this->checksum)) {
+            std::string excMsg= "NMEA format corrupted! (Checksum invalid) ";
+            excMsg+= NMEA::getChecksum(msg) + " != " + makeupper(this->checksum);
+
+            throw NMEAFormatException(excMsg);
+        }
     }
 
     if(fs == std::string::npos){

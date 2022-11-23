@@ -89,45 +89,12 @@ int main(int argc, char** argv) {
     talker.start();
 
     /*** MAIN LOOP ***/
-    const int APP_STATE_INIT_PATH = 1;
-    const int APP_STATE_NAVIGATION = 3;
-
-    int appState = APP_STATE_INIT_PATH;
-
-    std::vector<std::string> kmls;
-
     while(runApp){
-        switch (appState) { // NOLINT(hicpp-multiway-paths-covered)
-            case APP_STATE_INIT_PATH:{
-                gui.setMode(LedGUI::MODE_INIT);
-                // Determine KML file path
-                std::string kmlFilePath;
-                if(cmd.isDefined("-i")){
-                    kmlFilePath= cmd.value("-i");
-                } else {
-                    kmls= FlightPath::findKMLOnDrive();
-                    kmlFilePath= kmls[0];
-                }
-                if(!kmlFilePath.empty()) {
-                    try {
-                        fp = new FlightPath(kmlFilePath);
-                        naver.loadPath(fp);
-                        naver.resume();
-                        appState = APP_STATE_NAVIGATION;
-                        fp->print();
-                    } catch (const std::runtime_error &e) {
-                        Console::loge("main", e.what());
-                        usleep(1000000);
-                    }
-                } else {
-                    Console::loge("main", "No KML file defined nor found!");
-                    usleep(1000000);
-                }
-                break;
-            }
-            case APP_STATE_NAVIGATION:{
-                break;
-            }
+        if(deviceConfig.hasChanged()){
+            fp= new FlightPath(kmlWatcher.getFileName(deviceConfig.getSelectedPathId()));
+            naver.pause();
+            naver.loadPath(fp);
+            naver.resume();
         }
 
         usleep(1000*100); // 100ms

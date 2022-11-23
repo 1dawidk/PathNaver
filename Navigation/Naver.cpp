@@ -12,6 +12,9 @@ Naver::Naver(LedGUI *ledgui, GNSSModule *gnssModule) {
     lastMsgAt = 0;
     this->paused = true;
     this->pathMutex.unlock();
+
+    shift=0;
+    myPathIdx=0;
 }
 
 void Naver::loadPath(FlightPath *flightPath) {
@@ -21,7 +24,7 @@ void Naver::loadPath(FlightPath *flightPath) {
 }
 
 void Naver::loop() {
-    if(!paused) {
+    if(!paused && (path != nullptr)) {
         if (gnss->hasFix()) {
             gui->setMode(LedGUI::MODE_NAV);
             GNSSData gnssData = gnss->getData();
@@ -57,6 +60,7 @@ void Naver::loop() {
         }
         Worker::sleep(100);
     } else {
+        gui->setMode(LedGUI::MODE_CAROUSEL);
         Worker::sleep(500);
     }
 }

@@ -47,7 +47,11 @@ void TCPSerialComm::loop() {
     if(clientConnected){
         int cnt = poll(&pfd, 1, 100);
         if(cnt>0){
-            if(pfd.revents & POLLIN){
+
+            if(pfd.revents & (POLLRDHUP | POLLHUP)){
+                clientConnected = false;
+                Console::logi("TSC", "Client disconnected!");
+            } else if(pfd.revents & POLLIN){
                 char rxBuf[1024];
                 size_t bytes_read = read(cli, rxBuf, sizeof(rxBuf)-1);
                 if( bytes_read > 0 ) {
@@ -57,22 +61,22 @@ void TCPSerialComm::loop() {
                     Console::logi("TSC", "Received "+std::to_string(c)+" new messages");
                 }
             }
-        }
+        } else {
+            txMutex.lock();
+            if (!sendQueue.empty()) {
+                std::string sendMsg = sendQueue[0];
+                sendQueue.erase(sendQueue.begin());
 
-        txMutex.lock();
-        if(!sendQueue.empty()){
-            std::string sendMsg= sendQueue[0];
-            sendQueue.erase(sendQueue.begin());
+                write(cli, sendMsg.c_str(), sendMsg.length());
+            }
+            txMutex.unlock();
 
-            write(cli, sendMsg.c_str(), sendMsg.length());
-        }
-        txMutex.unlock();
-
-        if(tim::now()-lastKASend>4000){
-            std::string kamsg= "$PNKPA*44\n";
-            write(cli, kamsg.c_str(), kamsg.length());
-            Console::logd("TSC", "Sending PNKPA");
-            lastKASend= tim::now();
+            if (tim::now() - lastKASend > 4000) {
+                std::string kamsg = "$PNKPA*44\n";
+                write(cli, kamsg.c_str(), kamsg.length());
+                Console::logd("TSC", "Sending PNKPA");
+                lastKASend = tim::now();
+            }
         }
 
         //if(tim::now()-lastKARec>10000){
@@ -96,7 +100,7 @@ void TCPSerialComm::loop() {
                 lastKARec = tim::now();
 
                 pfd.fd = cli;
-                pfd.events = POLLIN;
+                pfd.events = POLLIN | POLLRDHUP;
 
                 clientConnected = true;
                 saidWaiting = false;

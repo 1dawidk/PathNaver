@@ -24,7 +24,8 @@ public:
     double getDistance(int r_idx, const GeoPoint& p);
     int getShiftDirection(const GeoPoint& p, int p_idx);
 
-    static std::vector<std::string> findKMLOnDrive();
+    int countPoints();
+    GeoPoint* getPoint(int idx);
 private:
     static auto file2char(const std::string &path);
     static rapidxml::xml_node <>* findNodeParameter(rapidxml::xml_node <>* parent, const std::string &param_name);

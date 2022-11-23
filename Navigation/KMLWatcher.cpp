@@ -11,7 +11,7 @@ void KMLWatcher::onStart() {
 
 void KMLWatcher::loop() {
     kmlsMutex.lock();
-    kmls= FlightPath::findKMLOnDrive();
+    kmls= KMLWatcher::findKMLOnDrive();
     kmlsMutex.unlock();
 
     std::this_thread::sleep_for(std::chrono::microseconds(1000*1000*2));
@@ -35,4 +35,25 @@ std::string KMLWatcher::getFileName(int idx) {
     std::string s = path.substr(start+1, end-start-1);
 
     return s;
+}
+
+FlightPath KMLWatcher::getFlightPath(int idx) {
+    kmlsMutex.lock();
+    std::string path = kmls[idx];
+    kmlsMutex.unlock();
+
+    return FlightPath(kmls[idx]);;
+}
+
+std::vector<std::string> KMLWatcher::findKMLOnDrive() {
+    char buff[256];
+    getlogin_r(buff, 256);
+    std::string r= SuperMisc::exec("find /media/"+std::string(buff)+" -name '*.kml'");
+
+    if((r.find("find")==std::string::npos) and !r.empty()) {
+        std::vector<std::string> lines = SuperMisc::split(r, '\n');
+        return lines;
+    } else {
+        return std::vector<std::string>();
+    }
 }
