@@ -2,8 +2,8 @@
 // Created by dkulpa on 07.11.2022.
 //
 
-#ifndef PATHNAVER_TCPSERIALCOMM_H
-#define PATHNAVER_TCPSERIALCOMM_H
+#ifndef PATHNAVER_TCPAPI_H
+#define PATHNAVER_TCPAPI_H
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -22,9 +22,9 @@
 typedef struct sockaddr_in sockaddr_in_t;
 typedef struct pollfd pollfd_t;
 
-class TCPSerialComm : public Worker{
+class TCPApi : public Worker{
 public:
-    explicit TCPSerialComm();
+    explicit TCPApi();
 
     // Receive
     std::string popMessage();
@@ -61,4 +61,4 @@ private:
 };
 
 
-#endif //PATHNAVER_TCPSERIALCOMM_H
+#endif //PATHNAVER_TCPAPI_H

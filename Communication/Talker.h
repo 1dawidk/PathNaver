@@ -6,7 +6,7 @@
 #define PATHNAVER_TALKER_H
 
 
-#include "TCPSerialComm.h"
+#include "WirelessSerialComm.h"
 #include "Worker.h"
 #include "../Navigation/KMLWatcher.h"
 #include "../DeviceConfig.h"
@@ -18,13 +18,13 @@
 
 class Talker : public Worker{
 public:
-    explicit Talker(TCPSerialComm *tsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig, Naver *naver);
+    explicit Talker(WirelessSerialComm *wsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig, Naver *naver);
 
 protected:
     void loop() override;
 
 private:
-    TCPSerialComm *tsc;
+    WirelessSerialComm *wsc;
     KMLWatcher *kmlWatcher;
     DeviceConfig *deviceConfig;
     Naver* naver;

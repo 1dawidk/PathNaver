@@ -17,7 +17,6 @@ class KMLWatcher : public Worker{
 public:
     int countFound();
     std::string getFileName(int idx);
-
     FlightPath getFlightPath(int idx);
 
     static std::vector<std::string> findKMLOnDrive();

@@ -26,15 +26,8 @@ LedGUI::LedGUI(int ledsNo, int maxShift) : leds(ledsNo) {
 void LedGUI::setMode(int m) {
     vals_mutex.lock();
     if(this->mode != m) {
-        if(this->mode == MODE_CAROUSEL){
-            leds.clear(0);
-        } else if(this->mode == MODE_INIT){
-            leds.clear(0);
-            leds.clear(1);
-            leds.clear(2);
-            leds.clear(-1);
-            leds.clear(-2);
-            leds.clear(-3);
+        for(int i=0; i<ledsNo; i++){
+            leds.clear(i);
         }
         leds.render();
         this->mode = m;
@@ -63,6 +56,9 @@ void LedGUI::loop() {
             break;
         case LedGUI::MODE_NAV:
             navSequence();
+            break;
+        case LedGUI::MODE_BTDISCOVERABLE:
+            btDiscoverableSequence();
             break;
         default: {
             Console::logw("LedGUI", "Unknown mode!");
@@ -93,6 +89,8 @@ void LedGUI::carouselSequence() {
         carouselDir*= -1;
     }
     leds.set(carouselPos+SIDE_PANEL_SIZE, LED_COLOR_BLUE);
+
+    Worker::sleep(50);
 }
 
 void LedGUI::navSequence() {
@@ -181,6 +179,24 @@ void LedGUI::setNavCountdown(char v) {
     navCountdown= v;
     sidePanelMode = SIDE_PANEL_MODE_COUNTDOWN;
     run_mutex.unlock();
+}
+
+void LedGUI::btDiscoverableSequence() {
+    btDiscoverableRedLevel+= btDiscoverableRedLevelDir;
+    if(btDiscoverableRedLevel>(btDiscoverableBlueLevel/3)){
+        btDiscoverableRedLevel= (btDiscoverableBlueLevel/3);
+        btDiscoverableRedLevelDir= -BT_DISCOVERABLE_RED_STEP;
+    } else if(btDiscoverableRedLevel < 0){
+        btDiscoverableRedLevel= 0;
+        btDiscoverableRedLevelDir= BT_DISCOVERABLE_RED_STEP;
+    }
+
+    int color= 0x00000000 | ((btDiscoverableBlueLevel<<16)&0x00FF0000) | (btDiscoverableRedLevel&0x000000FF);
+    for (int i = 0; i < ledsNo; ++i) {
+        leds.set(i, color);
+    }
+
+    Worker::sleep(60);
 }
 
 

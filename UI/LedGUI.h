@@ -18,6 +18,8 @@
 #define LED_COLOR_RED   0x000000ff
 #define LED_COLOR_GREEN 0x0000ff00
 
+#define BT_DISCOVERABLE_RED_STEP 1
+
 class LedGUI : public Worker {
 public:
     LedGUI(int ledsNo, int maxShift); // Max shift in meters
@@ -33,8 +35,9 @@ public:
 
     // Parameters
     static const int MODE_INIT = 0;
-    static const int MODE_CAROUSEL = 1;
-    static const int MODE_NAV = 2;
+    static const int MODE_BTDISCOVERABLE=1;
+    static const int MODE_CAROUSEL = 2;
+    static const int MODE_NAV = 3;
 
 protected:
     void onStart() override;
@@ -73,6 +76,12 @@ private:
     static const unsigned long INIT_BLINK_INTERVAL = 100; // ms
     static const int INIT_BLINK_COLOR = 0x00111111; // WWBBGGRR
     void initSequence();
+
+    // Bluetooth discoverable sequence
+    int btDiscoverableRedLevel=0;
+    int btDiscoverableRedLevelDir=BT_DISCOVERABLE_RED_STEP;
+    int btDiscoverableBlueLevel=60;
+    void btDiscoverableSequence();
 
     WS281xStrip leds;
 };

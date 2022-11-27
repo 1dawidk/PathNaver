@@ -7,8 +7,8 @@
 #include "Talker.h"
 
 
-Talker::Talker(TCPSerialComm *tsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig, Naver *naver) {
-    this->tsc = tsc;
+Talker::Talker(WirelessSerialComm *wsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceConfig, Naver *naver) {
+    this->wsc = wsc;
     this->kmlWatcher = kmlWatcher;
     this->deviceConfig = deviceConfig;
     this->naver = naver;
@@ -17,9 +17,9 @@ Talker::Talker(TCPSerialComm *tsc, KMLWatcher *kmlWatcher, DeviceConfig *deviceC
 }
 
 void Talker::loop() {
-    if(tsc->isConnected()) {
-        if (tsc->msgsInQueue()) {
-            std::string msg = tsc->popMessage();
+    if(wsc->isConnected()) {
+        if (wsc->msgsInQueue()) {
+            std::string msg = wsc->popMessage();
             try {
                 NMEA nmeaMsg(msg);
 
@@ -32,7 +32,7 @@ void Talker::loop() {
                     }
 
                     NMEA nmea("PNAPN", nmeaData);
-                    tsc->send(nmea.toString());
+                    wsc->send(nmea.toString());
                     Console::logd("Talker", "Sending PNAPN");
                 } else if (nmeaMsg.getName() == "PNPAD") {
                     int pathIdx = stoi(nmeaMsg.getValue(0));
@@ -52,7 +52,7 @@ void Talker::loop() {
                     }
 
                     NMEA sendNMEAMsg("PNPAD", nmeaData);
-                    tsc->send(sendNMEAMsg.toString());
+                    wsc->send(sendNMEAMsg.toString());
                     Console::logd("Talker", "Sending PNPAD");
                 } else if (nmeaMsg.getName() == "PNRUP"){
                     int path_id = stoi(nmeaMsg.getValue(0));
@@ -74,11 +74,11 @@ void Talker::loop() {
             nmeaData.add(gnssData.getLng());
             nmeaData.add(gnssData.getHeading());
             nmeaData.add(deviceConfig->getSelectedPathId());
-            nmeaData.add(naver->getMyPathIdx());
+            nmeaData.add(naver->getRouteIdx());
             nmeaData.add(naver->getShift());
 
             NMEA nmea("PNLID", nmeaData);
-            tsc->send(nmea.toString());
+            wsc->send(nmea.toString());
             Console::logd("Talker", "Sending PNLID");
 
             lastPNLIDSend = now;

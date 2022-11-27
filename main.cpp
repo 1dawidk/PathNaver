@@ -6,7 +6,6 @@
 #include "UI/LedGUI.h"
 #include "Navigation/Naver.h"
 #include <csignal>
-#include "Communication/TCPSerialComm.h"
 #include "Console.h"
 #include "Navigation/KMLWatcher.h"
 #include "Communication/Talker.h"
@@ -74,26 +73,35 @@ int main(int argc, char** argv) {
     // Prepare led string gui
     LedGUI gui(39, OFFSET_MAX); // Leds number and max shift in meters
     gui.start();
+    Console::logd("main()", "Showing Bluetooth discoverable GUI mode");
+    gui.setMode(LedGUI::MODE_BTDISCOVERABLE);
+    usleep(1000*1000*20);
+    Console::logd("main()", "Stoped Bluetooth discoverable GUI mode");
+    gui.setMode(LedGUI::MODE_INIT);
 
     GNSSModule gnss(std::stoi(cmd.value("-b")), verbose, device);
     Naver naver(&gui, &gnss);
-    TCPSerialComm sc;
+    WirelessSerialComm wsc;
     DeviceConfig deviceConfig;
     KMLWatcher kmlWatcher;
-    Talker talker(&sc, &kmlWatcher, &deviceConfig, &naver);
+    Talker talker(&wsc, &kmlWatcher, &deviceConfig, &naver);
 
     gnss.start();
     naver.start();
-    sc.start();
+    wsc.start();
     kmlWatcher.start();
     talker.start();
 
+    int state=0;
+
     /*** MAIN LOOP ***/
     while(runApp){
-        if(deviceConfig.hasChanged()){
-            fp= new FlightPath(kmlWatcher.getFileName(deviceConfig.getSelectedPathId()));
+        int pathId= deviceConfig.getSelectedPathId();
+
+        if((pathId!=naver.getPathId()) && (kmlWatcher.countFound()>0) && pathId<kmlWatcher.countFound()){
+            fp= new FlightPath(kmlWatcher.getFlightPath(pathId));
             naver.pause();
-            naver.loadPath(fp);
+            naver.loadPath(fp, pathId);
             naver.resume();
         }
 
@@ -106,7 +114,7 @@ int main(int argc, char** argv) {
     kmlWatcher.stop();
     talker.stop();
     gui.stop();
-    sc.stop();
+    wsc.stop();
     Console::logi("main", "Workers stopped");
     Console::stop();
     std::cout << "Console stopped! Bye, bye!" << std::endl;

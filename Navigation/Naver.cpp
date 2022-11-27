@@ -5,9 +5,9 @@
 #include "Naver.h"
 #include "../Console.h"
 
-Naver::Naver(LedGUI *ledgui, GNSSModule *gnssModule) {
-    this->gui = ledgui;
+Naver::Naver(GNSSModule *gnssModule) {
     this->gnss = gnssModule;
+    this->pathId=-1;
     this->path = nullptr;
     lastMsgAt = 0;
     this->paused = true;
@@ -17,8 +17,9 @@ Naver::Naver(LedGUI *ledgui, GNSSModule *gnssModule) {
     myPathIdx=0;
 }
 
-void Naver::loadPath(FlightPath *flightPath) {
+void Naver::loadPath(FlightPath *flightPath, int id) {
     pathMutex.lock();
+    pathId= id;
     path = flightPath;
     pathMutex.unlock();
 }
@@ -26,7 +27,6 @@ void Naver::loadPath(FlightPath *flightPath) {
 void Naver::loop() {
     if(!paused && (path != nullptr)) {
         if (gnss->hasFix()) {
-            gui->setMode(LedGUI::MODE_NAV);
             GNSSData gnssData = gnss->getData();
 
             pathMutex.lock();
@@ -55,12 +55,10 @@ void Naver::loop() {
                                      "m, " + std::to_string(my_path.distanceToEnd(me)) + "m left");
                 lastMsgAt = tim::now();
             }
-        } else {
-            gui->setMode(LedGUI::MODE_CAROUSEL);
         }
+
         Worker::sleep(100);
     } else {
-        gui->setMode(LedGUI::MODE_CAROUSEL);
         Worker::sleep(500);
     }
 }
@@ -85,6 +83,10 @@ double Naver::getShift() const {
     return shift;
 }
 
-int Naver::getMyPathIdx() const {
+int Naver::getRouteIdx() const {
     return myPathIdx;
+}
+
+int Naver::getPathId() const {
+    return pathId;
 }

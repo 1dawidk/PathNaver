@@ -16,8 +16,8 @@
 
 class Naver : public Worker {
 public:
-    Naver(LedGUI *gui, GNSSModule *gnssModule);
-    void loadPath(FlightPath *flightPath);
+    Naver(GNSSModule *gnssModule);
+    void loadPath(FlightPath *flightPath, int id);
 
     [[nodiscard]] bool hasFix() const;
     [[nodiscard]] GNSSData getGNSSData() const;
@@ -26,7 +26,8 @@ public:
     void resume();
 
     double getShift() const;
-    int getMyPathIdx() const;
+    int getPathId() const;
+    int getRouteIdx() const;
 
 protected:
     void loop() override;
@@ -34,8 +35,8 @@ protected:
 private:
     bool paused;
 
-    LedGUI *gui;
     GNSSModule *gnss;
+    int pathId;
     FlightPath *path;
     int blinkedFor= -1;
 

@@ -1,18 +1,15 @@
 //
 // Created by dkulpa on 07.11.2022.
 //
+#include "TCPApi.h"
 
 
-
-#include "TCPSerialComm.h"
-
-
-TCPSerialComm::TCPSerialComm() {
+TCPApi::TCPApi() {
     rxMutex.unlock();
     txMutex.unlock();
 }
 
-void TCPSerialComm::onStart() {
+void TCPApi::onStart() {
     int opt = 1;
 
     // Creating socket file descriptor
@@ -43,7 +40,7 @@ void TCPSerialComm::onStart() {
     saidWaiting= false;
 }
 
-void TCPSerialComm::loop() {
+void TCPApi::loop() {
     if(clientConnected){
         int cnt = poll(&pfd, 1, 100);
         if(cnt>0){
@@ -110,7 +107,7 @@ void TCPSerialComm::loop() {
 }
 
 
-std::string TCPSerialComm::popMessage() {
+std::string TCPApi::popMessage() {
     rxMutex.lock();
     std::string msg= br.popMsg();
     rxMutex.unlock();
@@ -118,7 +115,7 @@ std::string TCPSerialComm::popMessage() {
     return msg;
 }
 
-bool TCPSerialComm::msgsInQueue() {
+bool TCPApi::msgsInQueue() {
     rxMutex.lock();
     bool r= (br.queueSize()>0);
     rxMutex.unlock();
@@ -126,13 +123,13 @@ bool TCPSerialComm::msgsInQueue() {
     return r;
 }
 
-void TCPSerialComm::send(const std::string &msg) {
+void TCPApi::send(const std::string &msg) {
     txMutex.lock();
     sendQueue.emplace_back(msg);
     txMutex.unlock();
 }
 
-bool TCPSerialComm::isConnected() const {
+bool TCPApi::isConnected() const {
     return clientConnected;
 }
 
