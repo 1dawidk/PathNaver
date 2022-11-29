@@ -24,6 +24,10 @@ void Naver::loadPath(FlightPath *flightPath, int id) {
     pathMutex.unlock();
 }
 
+bool Naver::isPathLoaded() {
+    return path!= nullptr;
+}
+
 void Naver::loop() {
     if(!paused && (path != nullptr)) {
         if (gnss->hasFix()) {
@@ -34,15 +38,14 @@ void Naver::loop() {
             myPathIdx = path->findMyPath(me, gnssData.getHeading());
             GeoRoute my_path = path->getRoute(myPathIdx);
             shift = my_path.distanceTo(me) * (double) my_path.getShiftDirection(me);
-            gui->setRouteShift(shift);
 
             if (my_path.distanceToEnd(me) < COUNTDOWN_START_DISTANCE) {
                 if (blinkedFor != myPathIdx) {
                     if (my_path.distanceToEnd(me) < FINISH_BLINK_START_DISTANCE) {
-                        gui->blinkFinish();
+                        passedEndFlag= true;
                         blinkedFor = myPathIdx;
                     } else {
-                        gui->setNavCountdown((char) ((my_path.distanceToEnd(me) / COUNTDOWN_STEP) + 1));
+                        navCountdown= (int)((my_path.distanceToEnd(me) / COUNTDOWN_STEP) + 1);
                     }
                 }
             }
@@ -89,4 +92,14 @@ int Naver::getRouteIdx() const {
 
 int Naver::getPathId() const {
     return pathId;
+}
+
+int Naver::getNavCountdown() const{
+    return navCountdown;
+}
+
+bool Naver::getPassedEndFlag() {
+    bool r= passedEndFlag;
+    passedEndFlag= false;
+    return r;
 }

@@ -16,6 +16,8 @@ BluetoothApi::BluetoothApi(int port, uint32_t *uuid,
     this->descr= descr;
     this->prov= prov;
 
+    this->pairable = false;
+
     this->soc= -1;
     this->cli= -1;
     this->session= nullptr;
@@ -82,7 +84,7 @@ size_t BluetoothApi::tryRead(char *buf, int bufSize, int timeout) {
         if (cnt > 0) {
             if (pfd.revents & (POLLRDHUP | POLLHUP)) {
                 cli = -1;
-                bytes_read - 1;
+                bytes_read = 0;
             } else if (pfd.revents & POLLIN) {
                 bytes_read = read(cli, buf, bufSize);
             }
@@ -114,8 +116,12 @@ void BluetoothApi::stop() {
 }
 
 BluetoothApi::~BluetoothApi() {
-    if(session != nullptr){
-        sdp_close(session);
+    finish();
+
+    if(h!= nullptr){
+        if(h->joinable())
+            h->join();
+        delete h;
     }
 }
 
@@ -128,19 +134,19 @@ sdp_session_t *BluetoothApi::registerService(uint8_t rfcomm_channel,
                                              const std::string &descr,
                                              const std::string &prov) {
 
-    uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid,
+    uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid{},
             svc_class_uuid;
-    sdp_list_t *l2cap_list= nullptr,
-            *rfcomm_list= nullptr,
-            *root_list = nullptr,
-            *proto_list = nullptr,
-            *access_proto_list = nullptr,
-            *svc_class_list = nullptr,
-            *profile_list = nullptr;
-    sdp_data_t *channel = nullptr;
+    sdp_list_t *l2cap_list,
+            *rfcomm_list,
+            *root_list,
+            *proto_list,
+            *access_proto_list,
+            *svc_class_list,
+            *profile_list;
+    sdp_data_t *channel;
     sdp_profile_desc_t profile;
     sdp_record_t record = { 0 };
-    sdp_session_t *session = nullptr;
+    sdp_session_t *session;
 
     // set the general service ID
     sdp_uuid128_create(&svc_uuid, &svc_uuid_int);
@@ -235,4 +241,7 @@ void BluetoothApi::finish() {
 
     sdp_close(session);
     session= nullptr;
+
+    if(h != nullptr && h->joinable())
+         h->join();
 }

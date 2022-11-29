@@ -67,45 +67,72 @@ int main(int argc, char** argv) {
      * - TSC                    |   +
      * - MAIN THREAD            |   +
      */
-    // Empty flight path object
-    FlightPath *fp;
 
     // Prepare led string gui
     LedGUI gui(39, OFFSET_MAX); // Leds number and max shift in meters
     gui.start();
-    Console::logd("main()", "Showing Bluetooth discoverable GUI mode");
-    gui.setMode(LedGUI::MODE_BTDISCOVERABLE);
-    usleep(1000*1000*20);
-    Console::logd("main()", "Stoped Bluetooth discoverable GUI mode");
-    gui.setMode(LedGUI::MODE_INIT);
 
+    // Create Workers
     GNSSModule gnss(std::stoi(cmd.value("-b")), verbose, device);
-    Naver naver(&gui, &gnss);
+    Naver naver(&gnss);
     WirelessSerialComm wsc;
+    DeviceConfig loadedDeviceConfig;
     DeviceConfig deviceConfig;
     KMLWatcher kmlWatcher;
     Talker talker(&wsc, &kmlWatcher, &deviceConfig, &naver);
 
+    // Start threads
     gnss.start();
     naver.start();
     wsc.start();
     kmlWatcher.start();
     talker.start();
 
-    int state=0;
+    // Start bluetooth pairable process
+    Console::logd("main", "Showing Bluetooth discoverable GUI mode");
+    wsc.makePairable();
+    gui.setMode(LedGUI::MODE_BTDISCOVERABLE);
+
+    // Clear loaded path id (-1) and pause naver
+    loadedDeviceConfig.setSelectedPathId(-1);
+    naver.pause();
 
     /*** MAIN LOOP ***/
     while(runApp){
-        int pathId= deviceConfig.getSelectedPathId();
+        if(wsc.isPairable()){
 
-        if((pathId!=naver.getPathId()) && (kmlWatcher.countFound()>0) && pathId<kmlWatcher.countFound()){
-            fp= new FlightPath(kmlWatcher.getFlightPath(pathId));
-            naver.pause();
-            naver.loadPath(fp, pathId);
-            naver.resume();
+        } else {
+            // If path has changed load it
+            int pathId= deviceConfig.getSelectedPathId();
+            if(pathId>0 && pathId<kmlWatcher.countFound() && loadedDeviceConfig.getSelectedPathId()!=pathId){
+                loadedDeviceConfig.setSelectedPathId(pathId);
+                auto *fp= new FlightPath(kmlWatcher.getFlightPath(pathId));
+                naver.pause();
+                naver.loadPath(fp, pathId);
+                naver.resume();
+            }
+
+            // Naver is prepared and can run (GPS fixed)
+            if(naver.hasFix() && naver.isPathLoaded()){
+                if(gui.getMode()!=LedGUI::MODE_NAV){
+                    gui.setMode(LedGUI::MODE_NAV);
+                    naver.resume();
+                }
+
+                // Update gui
+                gui.setRouteShift(naver.getShift());
+                gui.setNavCountdown(static_cast<char>(naver.getNavCountdown()));
+                if(naver.getPassedEndFlag())
+                    gui.blinkFinish();
+            } else {
+                if(gui.getMode()!=LedGUI::MODE_CAROUSEL){
+                    gui.setMode(LedGUI::MODE_CAROUSEL);
+                    naver.pause();
+                }
+            }
         }
 
-        usleep(1000*100); // 100ms
+        usleep(1000); // 1ms
     }
 
     Console::logi("main", "Stopping threads...");

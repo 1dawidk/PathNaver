@@ -16,8 +16,9 @@
 
 class Naver : public Worker {
 public:
-    Naver(GNSSModule *gnssModule);
+    explicit Naver(GNSSModule *gnssModule);
     void loadPath(FlightPath *flightPath, int id);
+    bool isPathLoaded();
 
     [[nodiscard]] bool hasFix() const;
     [[nodiscard]] GNSSData getGNSSData() const;
@@ -25,9 +26,11 @@ public:
     void pause();
     void resume();
 
-    double getShift() const;
-    int getPathId() const;
-    int getRouteIdx() const;
+    [[nodiscard]] double getShift() const;
+    [[nodiscard]] int getPathId() const;
+    [[nodiscard]] int getRouteIdx() const;
+    [[nodiscard]] int getNavCountdown() const;
+    bool getPassedEndFlag();
 
 protected:
     void loop() override;
@@ -44,6 +47,8 @@ private:
 
     double shift;
     int myPathIdx;
+    int navCountdown=0;
+    bool passedEndFlag=false;
 
     std::mutex pathMutex;
 };

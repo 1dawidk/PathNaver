@@ -22,6 +22,9 @@ public:
     [[maybe_unused]] void send(const std::string &msg);
     [[maybe_unused]] [[nodiscard]] bool isConnected() const;
 
+    void makePairable();
+    bool isPairable();
+
 
 protected:
     void onStart() override;

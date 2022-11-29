@@ -26,38 +26,55 @@ void WirelessSerialComm::onStart() {
 }
 
 void WirelessSerialComm::loop() {
-    if((btAPI!= nullptr) && (btAPI->isClientConnected())){
-        char rxBuf[1024];
-        size_t bytes_read = btAPI->tryRead(rxBuf, 1023, 100);
-        if( bytes_read > 0 ) {
-            rxMutex.lock();
-            int c= blr.update(rxBuf);
-            rxMutex.unlock();
-            Console::logi("WSC", "Received "+std::to_string(c)+" new messages");
+    if(btAPI != nullptr){
+        if(btAPI->isPairableRunning()){
+            Console::logi("WSC", "Listening for pairing devices...");
+            Worker::sleep(1000);
         } else {
-            txMutex.lock();
-            if (!sendQueue.empty()) {
-                std::string sendMsg = sendQueue[0];
-                sendQueue.erase(sendQueue.begin());
-                btAPI->write(sendMsg);
-            }
-            txMutex.unlock();
+            if(btAPI->isClientConnected()){
+                char rxBuf[1024];
+                size_t bytes_read = btAPI->tryRead(rxBuf, 1023, 100);
+                if( bytes_read > 0 ) {
+                    rxMutex.lock();
+                    int c= blr.update(rxBuf);
+                    rxMutex.unlock();
+                    Console::logi("WSC", "Received "+std::to_string(c)+" new messages");
+                } else {
+                    txMutex.lock();
+                    if (!sendQueue.empty()) {
+                        std::string sendMsg = sendQueue[0];
+                        sendQueue.erase(sendQueue.begin());
+                        btAPI->write(sendMsg);
+                    }
+                    txMutex.unlock();
 
-            if (tim::now() - lastKASend > 4000) {
-                std::string kamsg = "$PNKPA*44\n";
-                btAPI->write(kamsg);
-                Console::logd("WSC", "Sending PNKPA");
-                lastKASend = tim::now();
-            }
-        }
-    } else {
-        Console::logi("WSC", "Waiting for client...!");
-        if(btAPI!= nullptr) {
-            if (btAPI->tryAccept(5000)) {
-                Console::logi("WSC", "Client connected");
+                    if (tim::now() - lastKASend > 4000) {
+                        std::string kamsg = "$PNKPA*44\n";
+                        btAPI->write(kamsg);
+                        Console::logd("WSC", "Sending PNKPA");
+                        lastKASend = tim::now();
+                    }
+                }
+            } else {
+                Console::logi("WSC", "Waiting for client...!");
+                if (btAPI->tryAccept(5000)) {
+                    Console::logi("WSC", "Client connected");
+                }
             }
         }
     }
+}
+
+void WirelessSerialComm::makePairable() {
+    if(btAPI!= nullptr)
+        btAPI->runPairable(60);
+}
+
+bool WirelessSerialComm::isPairable() {
+    if(btAPI!= nullptr)
+        return btAPI->isPairableRunning();
+
+    return true;
 }
 
 [[maybe_unused]] bool WirelessSerialComm::msgsInQueue() {

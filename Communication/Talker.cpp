@@ -13,7 +13,8 @@ Talker::Talker(WirelessSerialComm *wsc, KMLWatcher *kmlWatcher, DeviceConfig *de
     this->deviceConfig = deviceConfig;
     this->naver = naver;
 
-    lastPNLIDSend = 0;
+    lastPNLINSend = 0;
+    lastPNLISSend = 0;
 }
 
 void Talker::loop() {
@@ -65,7 +66,7 @@ void Talker::loop() {
         }
 
         ulong now = tim::now();
-        if (now - lastPNLIDSend > TALKER_PNLID_INTERVAL_MS) {
+        if (now - lastPNLINSend > TALKER_PNLIN_INTERVAL_MS) {
             NMEAData nmeaData;
             GNSSData gnssData = naver->getGNSSData();
 
@@ -77,11 +78,22 @@ void Talker::loop() {
             nmeaData.add(naver->getRouteIdx());
             nmeaData.add(naver->getShift());
 
-            NMEA nmea("PNLID", nmeaData);
+            NMEA nmea("PNLIN", nmeaData);
             wsc->send(nmea.toString());
-            Console::logd("Talker", "Sending PNLID");
+            Console::logd("Talker", "Sending PNLIN");
 
-            lastPNLIDSend = now;
+            lastPNLINSend = now;
+        }
+
+        now = tim::now();
+        if (now - lastPNLISSend > TALKER_PNLIS_INTERVAL_MS) {
+            NMEAData nmeaData;
+
+            NMEA nmea("PNLIS", nmeaData);
+            wsc->send(nmea.toString());
+            Console::logd("Talker", "Sending PNLIS");
+
+            lastPNLISSend = now;
         }
     }
 }

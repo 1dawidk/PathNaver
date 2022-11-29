@@ -56,7 +56,7 @@ private:
 
     bool pairable;
     std::unique_ptr<FILE, decltype(&pclose)> *paringPipe{};
-    std::thread *h;
+    std::thread *h{};
 
     int cli;
     struct sockaddr_rc rem_addr = { 0 };

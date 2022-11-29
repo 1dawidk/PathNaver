@@ -14,7 +14,8 @@
 #include "../Navigation/Naver.h"
 #include <NMEA/NMEA.h>
 
-#define TALKER_PNLID_INTERVAL_MS   2000
+#define TALKER_PNLIN_INTERVAL_MS   2000
+#define TALKER_PNLIS_INTERVAL_MS   2000
 
 class Talker : public Worker{
 public:
@@ -29,7 +30,9 @@ private:
     DeviceConfig *deviceConfig;
     Naver* naver;
 
-    ulong lastPNLIDSend;
+
+    ulong lastPNLINSend;
+    ulong lastPNLISSend;
 };
 
 

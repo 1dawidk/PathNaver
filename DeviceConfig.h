@@ -23,13 +23,9 @@ public:
 
     void setSelectedPathId(int v);
     int getSelectedPathId();
-
-    bool hasChanged();
 private:
     int selectedPathId;
     std::mutex changeMutex;
-
-    bool stateChanged;
 };
 
 
