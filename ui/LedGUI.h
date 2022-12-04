@@ -62,7 +62,7 @@ private:
     int carouselPos;
     int carouselDir;
 
-    // Navigation sequence
+    // navigation sequence
     void navSequence();
     int navLedIdx;
     char navCountdown;

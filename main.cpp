@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
      * - Navigator              |   +
      * - LED GUI                |   +
      * - KMLs watching process  |   +
-     * - Communication process  |   +
+     * - communication process  |   +
      * - TSC                    |   +
      * - MAIN THREAD            |   +
      */
