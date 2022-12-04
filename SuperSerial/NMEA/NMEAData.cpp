@@ -68,3 +68,7 @@ std::string &NMEAData::get(int i) {
     return data[i];
 }
 
+int NMEAData::size() {
+    return static_cast<int>(data.size());
+}
+

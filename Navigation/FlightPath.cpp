@@ -117,7 +117,7 @@ int FlightPath::parseFile(const std::string &fil_path) {
     return 0;
 }
 
-void FlightPath::print() {
+[[maybe_unused]] void FlightPath::print() {
     //Console::logi("KML", "Flight Route ("+std::to_string(points.size())+" points)");
     for(const auto& p: this->points){
         //Console::logi("KML", std::to_string(p->getLat())+" / "+std::to_string(p->getLon()));
@@ -144,11 +144,11 @@ int FlightPath::findMyPath(const GeoPoint& p, double hdg) {
     return nearestIdx;
 }
 
-double FlightPath::getDistance(int r_idx, const GeoPoint& p) {
+[[maybe_unused]] double FlightPath::getDistance(int r_idx, const GeoPoint& p) {
     return path[r_idx]->distanceTo(p);
 }
 
-int FlightPath::getShiftDirection(const GeoPoint &p, int p_idx) {
+[[maybe_unused]] int FlightPath::getShiftDirection(const GeoPoint &p, int p_idx) {
     return path[p_idx]->getShiftDirection(p);
 }
 
@@ -157,9 +157,50 @@ GeoRoute FlightPath::getRoute(int idx) {
 }
 
 int FlightPath::countPoints() {
-    return points.size();
+    return static_cast<int>(points.size());
 }
 
 GeoPoint* FlightPath::getPoint(int idx) {
     return points[idx];
+}
+
+bool FlightPath::createKML(const std::string &name, const std::vector<GeoPoint*> &ps) {
+    std::string path= "./"+name;
+    if(name.find(".kml")==std::string::npos)
+        path+= ".kml";
+
+    std::ofstream f(path);
+
+    if(f.is_open()){
+        f << KML_XML_HEADER << std::endl;
+        f << KML_HEADER << std::endl;
+
+        f << "<Document>" << std::endl;
+        f << "<name>" << name << "</name>" << std::endl;
+        f << "<Placemark>" << std::endl;
+        f << "<name>std</name>" << std::endl;
+        f << "<LineString>" << std::endl;
+        f << "<coordinates>" << std::endl;
+
+        for(int i=0; i<ps.size(); i++){
+            f << ps[i]->getLat() << "," << ps[i]->getLon() << ",0";
+            if(i<(ps.size()-1))
+                f << " ";
+        }
+        f << std::endl;
+
+
+        f << "</coordinates>" << std::endl;
+        f << "</LineString>" << std::endl;
+        f << "</Placemark>" << std::endl;
+        f << "</Document>" << std::endl;
+
+        f << "</kml>" << std::endl;
+
+        f.close();
+
+        return true;
+    } else {
+        return false;
+    }
 }

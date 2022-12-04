@@ -21,6 +21,7 @@ WirelessSerialComm::WirelessSerialComm() {
 
 void WirelessSerialComm::onStart() {
     uint32_t uuid[4]= {0x01110000, 0x00100000, 0x80000080, 0xFB349B5F};
+
     btAPI= new BluetoothApi(1, uuid, "PathNaver", "Path naving device", "ILOT");
     btAPI->start();
 }
@@ -38,7 +39,8 @@ void WirelessSerialComm::loop() {
                     rxMutex.lock();
                     int c= blr.update(rxBuf);
                     rxMutex.unlock();
-                    Console::logi("WSC", "Received "+std::to_string(c)+" new messages");
+                    if(c>0)
+                        Console::logi("WSC", "Received "+std::to_string(c)+" new messages");
                 } else {
                     txMutex.lock();
                     if (!sendQueue.empty()) {
@@ -67,7 +69,11 @@ void WirelessSerialComm::loop() {
 
 void WirelessSerialComm::makePairable() {
     if(btAPI!= nullptr)
-        btAPI->runPairable(60);
+#ifdef DEBUG
+        btAPI->runPairable(2);
+#else
+        btAPI->runPairable(120);
+#endif
 }
 
 bool WirelessSerialComm::isPairable() {

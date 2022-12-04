@@ -103,3 +103,7 @@ bool Naver::getPassedEndFlag() {
     passedEndFlag= false;
     return r;
 }
+
+int Naver::getState() const{
+    return gnss->getState();
+}

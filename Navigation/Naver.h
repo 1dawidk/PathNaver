@@ -21,6 +21,7 @@ public:
     bool isPathLoaded();
 
     [[nodiscard]] bool hasFix() const;
+    [[nodiscard]] int getState() const;
     [[nodiscard]] GNSSData getGNSSData() const;
 
     void pause();

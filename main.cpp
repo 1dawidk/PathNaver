@@ -27,6 +27,7 @@ void stopApp(int s);
 
 int main(int argc, char** argv) {
     // Prepare signal catchers
+    srand(tim::now());
     configSigCatch();
 
     // Prepare command line arguments parser
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
     talker.start();
 
     // Start bluetooth pairable process
-    Console::logd("main", "Showing Bluetooth discoverable GUI mode");
+    Console::logd("main", "Bluetooth discoverable GUI mode");
     wsc.makePairable();
     gui.setMode(LedGUI::MODE_BTDISCOVERABLE);
 

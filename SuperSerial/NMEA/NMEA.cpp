@@ -92,3 +92,11 @@ std::string NMEA::toString() {
 
     return raw;
 }
+
+bool NMEA::isNamed(const std::string &n) const{
+    return this->name==n;
+}
+
+int NMEA::countDataFields() {
+    return data.size();
+}

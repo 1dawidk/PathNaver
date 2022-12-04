@@ -8,36 +8,29 @@
 BufferedReader::BufferedReader() {
     rxBuffHead= rxBuff;
     *rxBuffHead= 0;
+    rxBuf= "";
 }
 
 int BufferedReader::update(char *rx) {
     int msgCnt = 0;
 
-    // Check for buffer overflow
-    if( ((rxBuffHead-rxBuff) + strlen(rx)) >= (2 * BUFFEREDREADER_MAX_BUFFER_SIZE) ){
-        return -1; // OVERFLOW!
-    }
+    rxBuf+= rx;
+    size_t endlPos= rxBuf.find('\n');
 
-    memcpy(rxBuffHead, rx, strlen(rx));
-    rxBuffHead+= strlen(rx);
-    *rxBuffHead= 0;
+    while (endlPos != std::string::npos){
+        msgs.emplace_back(rxBuf.substr(0, endlPos));
 
-    char *endlPos = strchr(rxBuff, '\n');
-    while(endlPos != nullptr){
-        char msgBuff[BUFFEREDREADER_MAX_BUFFER_SIZE];
-        memcpy(msgBuff, rxBuff, endlPos-rxBuff);
-        msgBuff[endlPos-rxBuff] = 0;
-
-        msgs.emplace_back(msgBuff);
-        Console::logi("BufferedReader", msgBuff);
+        // Console::logi("BufferedReader", msgs[msgs.size()-1]);
+        Console::logi("BufferedReader",
+                      "New message ("+std::to_string(msgs[msgs.size()-1].length())+" chars)");
         if(msgs.size() > BUFFEREDREADER_MAX_QUEUE_SIZE){
             msgs.erase(msgs.begin());
         }
 
         msgCnt++;
-        memmove(rxBuff, endlPos+1, endlPos-rxBuff);
-        rxBuffHead-= (endlPos-rxBuff+1);
-        endlPos = strchr(rxBuff, '\n');
+        rxBuf.erase(0, endlPos+1);
+
+        endlPos= rxBuf.find('\n');
     }
 
     return msgCnt;

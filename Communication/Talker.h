@@ -25,10 +25,19 @@ protected:
     void loop() override;
 
 private:
+    void processIncomingMessage(const std::string &msg);
+
+    void sendPNAPN();
+    void sendPNPAD(int location, int id);
+    void sendPNLIN();
+    void sendPNLIS();
+    void processUpload(NMEA &nmeaMsg);
+
     WirelessSerialComm *wsc;
     KMLWatcher *kmlWatcher;
     DeviceConfig *deviceConfig;
     Naver* naver;
+    int sentKMLSetId;
 
 
     ulong lastPNLINSend;

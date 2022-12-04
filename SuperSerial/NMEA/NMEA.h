@@ -29,7 +29,9 @@ public:
     NMEA(const std::string &name, const NMEAData &data);
     [[nodiscard]] std::string getName() const;
     std::string getValue(int i);
+    int countDataFields();
     std::string toString();
+    [[nodiscard]] bool isNamed(const std::string &n) const;
 
     static std::string getChecksum(const std::string &msg);
     static std::string &makeupper(std::string &s);

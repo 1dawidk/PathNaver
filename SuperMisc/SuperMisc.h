@@ -18,6 +18,7 @@ namespace SuperMisc{
     std::vector<std::string> split(const std::string &s, char d);
     std::string exec(const std::string &cmd);
     void removeChar(std::string &s, char c);
+    int getCpuTemp();
 }
 
 #endif //UINS_CPP_SUPERMISC_H

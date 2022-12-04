@@ -19,6 +19,7 @@ public:
     std::string popMsg();
     int queueSize();
 private:
+    std::string rxBuf;
     char rxBuff[2*BUFFEREDREADER_MAX_BUFFER_SIZE]{};
     char *rxBuffHead;
 

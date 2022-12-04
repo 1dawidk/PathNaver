@@ -13,7 +13,7 @@ GNSSModule::GNSSModule(int baudrate, bool verbose, const std::string &port) {
     this->port = port;
     this->buffer_started = false;
     this->serial_buffer = nullptr;
-    fix = false;
+    state = GNSS_MODULE_NOT_FOUND;
 
     dataMutex.unlock();
 
@@ -53,7 +53,7 @@ bool GNSSModule::startBuffer() {
 
 bool GNSSModule::hasFix() {
     dataMutex.lock();
-    bool f= fix;
+    bool f= (state==GNSS_MODULE_OK);
     dataMutex.unlock();
 
     return f;
@@ -69,7 +69,7 @@ GNSSData GNSSModule::getData() {
 
 void GNSSModule::cleanup() {
     dataMutex.lock();
-    fix = false;
+    state= GNSS_MODULE_NOT_FOUND;
     dataMutex.unlock();
 
     if(serial_buffer != nullptr) {
@@ -107,11 +107,11 @@ void GNSSModule::loop() {
                     gnssData.setLat( (double)latd + latm/60.0 );
                     gnssData.setLng((double)lngd + lngm/60.0);
                     gnssData.setHeading(GeoCalc::calcHeading(GeoPoint(llat, llng), GeoPoint(gnssData.getLat(), gnssData.getLng())));
-                    fix = true;
+                    state= GNSS_MODULE_OK;
                     dataMutex.unlock();
                 } else {
                     dataMutex.lock();
-                    fix = false;
+                    state= GNSS_MODULE_NO_FIX;
                     dataMutex.unlock();
                 }
             } catch (std::invalid_argument &e) {
@@ -124,9 +124,16 @@ void GNSSModule::loop() {
         } else {
             // Check if port is really open. If not -> perform cleanup
             if(!serial_buffer->isOpen()){
+                dataMutex.lock();
+                state= GNSS_MODULE_NOT_FOUND;
+                dataMutex.unlock();
                 Console::logw("GNSSModule", "Disconnected! Cleanup!");
                 cleanup();
                 Worker::sleep(3000);
+            } else {
+                dataMutex.lock();
+                state= GNSS_MODULE_NO_FIX;
+                dataMutex.unlock();
             }
         }
     }
@@ -134,6 +141,9 @@ void GNSSModule::loop() {
     else {
         cleanup();
         if(!startBuffer()){
+            dataMutex.lock();
+            state= GNSS_MODULE_NOT_FOUND;
+            dataMutex.unlock();
             Console::loge("GNSSModule", "Cannot open gnss module serial!");
             Worker::sleep(3000);
         }
@@ -144,4 +154,8 @@ void GNSSModule::loop() {
 
 void GNSSModule::onStop() {
     cleanup();
+}
+
+int GNSSModule::getState() const {
+    return state;
 }

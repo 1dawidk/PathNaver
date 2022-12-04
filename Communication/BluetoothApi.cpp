@@ -4,6 +4,7 @@
 
 
 #include "BluetoothApi.h"
+#include "../Console.h"
 
 
 BluetoothApi::BluetoothApi(int port, uint32_t *uuid,
@@ -26,6 +27,10 @@ BluetoothApi::BluetoothApi(int port, uint32_t *uuid,
 void BluetoothApi::start() {
     int result;
     struct sockaddr_rc loc_addr = { 0 };
+
+    if(BluetoothApi::checkIfSystemIsPrepared()){
+        //BluetoothApi::prepareSystem("Path Naver Device");
+    }
 
     // local bluetooth adapter
     loc_addr.rc_family = AF_BLUETOOTH;
@@ -87,6 +92,7 @@ size_t BluetoothApi::tryRead(char *buf, int bufSize, int timeout) {
                 bytes_read = 0;
             } else if (pfd.revents & POLLIN) {
                 bytes_read = read(cli, buf, bufSize);
+                buf[bytes_read]= 0;
             }
         }
     } else {
@@ -97,8 +103,22 @@ size_t BluetoothApi::tryRead(char *buf, int bufSize, int timeout) {
 }
 
 void BluetoothApi::write(const std::string &msg) const {
-    if(cli >= 0)
-        ::write(cli, msg.c_str(), msg.length());
+    if(cli >= 0) {
+        size_t writeLen;
+        size_t msgLen= msg.length();
+        size_t writen= 0;
+        const char* mb= msg.c_str();
+
+        while (writen<msgLen){
+            if(msgLen-writen > 4096){
+                writeLen= 4096;
+            } else {
+                writeLen= msgLen-writen;
+            }
+
+            writen+= ::write(cli, mb+writen, writeLen);
+        }
+    }
 }
 
 bool BluetoothApi::isClientConnected() const {
@@ -244,4 +264,44 @@ void BluetoothApi::finish() {
 
     if(h != nullptr && h->joinable())
          h->join();
+}
+
+std::string BluetoothApi::execute(std::string cmd) {
+    std::array<char, 128> buffer{};
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+
+    return result;
+}
+
+int BluetoothApi::checkIfSystemIsPrepared() {
+    std::string r= execute("cat /lib/systemd/system/bluetooth.service | grep \"ExecStart=/usr/libexec/bluetooth/bluetoothd -C\"");
+
+    if(r.empty()){
+        return -1;
+    } else if(r.find("/lib/systemd/system/bluetooth.service") != std::string::npos){
+        return -2;
+    } else if(r.find("ExecStart=/usr/libexec/bluetooth/bluetoothd -C") != std::string::npos){
+        return -3;
+    }
+
+    return 0;
+}
+
+void BluetoothApi::prepareSystem(const std::string &devName) {
+    execute("sed -i 's/ExecStart=/usr/libexec/bluetooth/bluetoothd/ExecStart=/usr/libexec/bluetooth/bluetoothd -C/g' /lib/systemd/system/bluetooth.service");
+
+    execute("rfkill unblock all");
+
+    // Set bluetooth device name
+    execute("echo 'PRETTY_HOSTNAME='"+devName+" > /etc/machine-info");
+
+    // Restart bt service
+    execute("systemctl restart bluetooth.service");
 }

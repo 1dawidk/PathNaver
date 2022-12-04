@@ -36,7 +36,7 @@ public:
 
 
     void runPairable(int dur);
-    bool isPairableRunning() const;
+    [[nodiscard]] bool isPairableRunning() const;
     void _pairableWork();
 
     std::string getClientAddress();
@@ -63,6 +63,10 @@ private:
 
     pollfd_t pfd{};    // Messages listening pfd
     pollfd_t apfd{};   // Accept listening pfd
+
+    static std::string execute(std::string cmd);
+    static int checkIfSystemIsPrepared();
+    static void prepareSystem(const std::string &devName);
 
     static sdp_session_t* registerService(uint8_t rfcomm_channel,
                                           uint32_t *svc_uuid_int,

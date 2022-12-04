@@ -42,3 +42,9 @@ void SuperMisc::removeChar(std::string &s, char c) {
         s.erase(pos,1);
     }
 }
+
+int SuperMisc::getCpuTemp() {
+    std::string r= exec("cat /sys/class/thermal/thermal_zone0/temp");
+
+    return std::stoi(r)/1000;
+}

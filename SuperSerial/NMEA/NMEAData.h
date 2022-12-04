@@ -26,6 +26,7 @@ public:
     void add(double v);
 
     std::string& get(int i);
+    int size();
 
     [[nodiscard]] std::string toString() const;
 private:
